@@ -68,7 +68,7 @@
     <section style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px;">
       <div style="flex:1;min-width:280px;position:relative;display:flex;align-items:center;">
         <span style="position:absolute;left:15px;color:#5f6b7a;font-size:16px;pointer-events:none;">⌕</span>
-        <input value="{{ query }}" onInput="{{ onSearch }}" placeholder="Buscar por código, descrição ou localização…" style="width:100%;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:13px 14px 13px 42px;font-size:14px;outline:none;letter-spacing:.2px;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
+        <input value="{{ query }}" onChange="{{ onSearch }}" placeholder="Buscar por código, descrição ou localização…" style="width:100%;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:13px 14px 13px 42px;font-size:14px;outline:none;letter-spacing:.2px;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
         <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
           <button onClick="{{ clearQuery }}" style="position:absolute;right:10px;background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;" style-hover="color:#fff;border-color:#3a4757;">✕</button>
         </sc-if>
@@ -97,7 +97,7 @@
       <div style="overflow-x:auto;">
         <div style="min-width:960px;">
 
-          <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;position:sticky;top:65px;z-index:10;">
+          <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;">
             <div></div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;font-family:'IBM Plex Mono',monospace;">COD.</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">DESCRIÇÃO</div>
@@ -372,3 +372,4 @@ class Component extends DCLogic {
 </script>
 </body>
 </html>
+                                   
