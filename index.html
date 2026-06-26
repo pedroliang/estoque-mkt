@@ -11,6 +11,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
@@ -80,6 +83,12 @@
       </div>
       <button onClick="{{ toggleLow }}" style="{{ lowToggleStyle }}">
         <span style="font-size:13px;">▲</span> Só estoque baixo
+      </button>
+      <button onClick="{{ exportExcel }}" title="Exportar todos os itens para Excel" style="display:flex;align-items:center;gap:7px;background:#11211a;color:#46c08a;border:1px solid #245741;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;" style-hover="background:#173026;border-color:#2f7556;color:#5fd6a0;">
+        <span style="font-size:13px;">▤</span> Excel
+      </button>
+      <button onClick="{{ exportPdf }}" title="Exportar todos os itens para PDF" style="display:flex;align-items:center;gap:7px;background:#211414;color:#e0816f;border:1px solid #5a2e26;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;" style-hover="background:#2c1a17;border-color:#7a3d32;color:#ef9a86;">
+        <span style="font-size:13px;">▦</span> PDF
       </button>
     </section>
 
@@ -216,6 +225,59 @@ class Component extends DCLogic {
   toNum(str) {
     const d = String(str == null ? "" : str).replace(/[^\d]/g, "");
     return d ? parseInt(d, 10) : 0;
+  }
+
+  exportStamp() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, "0");
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+
+  exportExcel() {
+    if (!window.XLSX) { alert("A biblioteca de Excel ainda está carregando. Tente novamente em alguns instantes."); return; }
+    if (!this.state.raw.length) { alert("Não há dados para exportar."); return; }
+    const rows = this.state.raw.map(p => ({
+      "Código": p.cod,
+      "Descrição": p.desc,
+      "Total Un": p.totalNum,
+      "Por Caixa": p.porCx,
+      "Cx Fechada": p.cFechada,
+      "Cx Aberta": p.cAberta,
+      "Localização": p.locals.join(", ") || "—",
+      "Atualização": p.atualizacao,
+      "Verificado": p.verified ? "Sim" : "Não",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [{ wch: 8 }, { wch: 46 }, { wch: 9 }, { wch: 10 }, { wch: 11 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 11 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Estoque MKT");
+    XLSX.writeFile(wb, "estoque-mkt-" + this.exportStamp() + ".xlsx");
+  }
+
+  exportPdf() {
+    const J = window.jspdf && window.jspdf.jsPDF;
+    if (!J) { alert("A biblioteca de PDF ainda está carregando. Tente novamente em alguns instantes."); return; }
+    if (!this.state.raw.length) { alert("Não há dados para exportar."); return; }
+    const doc = new J({ orientation: "landscape", unit: "pt", format: "a4" });
+    const body = this.state.raw.map(p => [
+      p.cod, p.desc, String(p.totalNum), p.porCx, p.cFechada, p.cAberta,
+      p.locals.join(", ") || "—", p.atualizacao, p.verified ? "Sim" : "Não",
+    ]);
+    doc.setFontSize(14);
+    doc.text("Estoque MKT — Almoxarifado · Marketing", 40, 36);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + "  ·  " + body.length + " itens", 40, 52);
+    doc.autoTable({
+      head: [["Código", "Descrição", "Total Un", "Por Cx", "Cx Fech.", "Cx Aberta", "Localização", "Atualização", "Ver."]],
+      body,
+      startY: 64,
+      styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
+      headStyles: { fillColor: [47, 109, 240], textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [244, 247, 251] },
+      columnStyles: { 1: { cellWidth: 200 } },
+    });
+    doc.save("estoque-mkt-" + this.exportStamp() + ".pdf");
   }
 
   async load(isAuto) {
@@ -365,6 +427,8 @@ class Component extends DCLogic {
       onSearch: e => this.setState({ query: e.target.value }),
       clearQuery: () => this.setState({ query: "" }),
       toggleLow: () => this.setState(st => ({ onlyLow: !st.onlyLow })),
+      exportExcel: () => this.exportExcel(),
+      exportPdf: () => this.exportPdf(),
       refresh: () => this.load(),
     };
   }
@@ -372,4 +436,3 @@ class Component extends DCLogic {
 </script>
 </body>
 </html>
-                                   
