@@ -301,7 +301,8 @@ class Component extends DCLogic {
         if (cu === "COD." || cu === "COD" || desc.toUpperCase() === "DESCRICAO" || desc.toUpperCase() === "DESCRIÇÃO") continue;
         if (cu === "ESTOQUE MKT") continue;
         const localRaw = (r[6] || "").trim();
-        const verif = (r[8] || "").trim();
+        const verif = (r[8] || "").trim().toUpperCase();
+        const isVer = verif === "TRUE" || verif === "1" || verif === "VERDADEIRO" || verif === "SIM" || verif === "X" || verif === "✓" || verif === "YES" || verif === "Y";
         products.push({
           cod: cod || "—",
           desc,
@@ -313,8 +314,8 @@ class Component extends DCLogic {
           locals: localRaw ? localRaw.split(/[,/]+/).map(x => x.trim()).filter(Boolean) : [],
           noLocal: !localRaw,
           atualizacao: (r[7] || "").trim() || "—",
-          verified: !!verif && verif !== "0",
-          notVerified: !verif || verif === "0",
+          verified: isVer,
+          notVerified: !isVer,
         });
       }
       this.setState({ raw: products, loading: false, error: null, lastUpdated: Date.now(), refreshing: false });
