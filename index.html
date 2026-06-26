@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:#0a0d12;color:#e3e9f0;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  ::-webkit-scrollbar{width:11px;height:11px}
+  ::-webkit-scrollbar-track{background:#0a0d12}
+  ::-webkit-scrollbar-thumb{background:#283341;border-radius:0;border:3px solid #0a0d12}
+  ::-webkit-scrollbar-thumb:hover{background:#34404f}
+  input{font-family:inherit}
+  @keyframes pulseDot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.82)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes shimmer{0%{background-position:-340px 0}100%{background-position:340px 0}}
+  @keyframes barIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#0a0d12;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:34px 34px;">
+
+  <header style="position:sticky;top:0;z-index:30;background:rgba(11,15,21,.93);backdrop-filter:blur(8px);border-bottom:1px solid #222b37;">
+    <div style="max-width:1280px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
+      <div style="display:flex;align-items:center;gap:13px;min-width:0;">
+        <div style="width:38px;height:38px;flex:none;background:linear-gradient(145deg,#2f6df0,#1d4fbf);border:1px solid #4d82ff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px #0a0d12,0 6px 16px rgba(47,109,240,.32);">
+          <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:#fff;letter-spacing:-.5px;">MK</span>
+        </div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:9px;">
+            <h1 style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;letter-spacing:1.5px;color:#f2f6fb;">ESTOQUE MKT</h1>
+            <span style="font-size:9.5px;font-weight:600;letter-spacing:1px;color:#7d8a99;border:1px solid #2c3744;padding:2px 6px;">1B</span>
+          </div>
+          <div style="font-size:11px;color:#6b7889;letter-spacing:.3px;margin-top:1px;">Almoxarifado · Marketing</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <sc-if value="{{ live }}" hint-placeholder-val="{{ true }}">
+            <span style="width:8px;height:8px;border-radius:50%;background:#35d49a;box-shadow:0 0 9px #35d49a;animation:pulseDot 1.6s ease-in-out infinite;"></span>
+          </sc-if>
+          <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+            <span style="width:8px;height:8px;border-radius:50%;background:#ef5d5d;box-shadow:0 0 9px #ef5d5d;"></span>
+          </sc-if>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:1.2px;color:#9aa7b6;">{{ liveLabel }}</span>
+        </div>
+        <div style="text-align:right;line-height:1.25;">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#cdd6e1;">{{ updatedTime }}</div>
+          <div style="font-size:10px;color:#6b7889;letter-spacing:.3px;">{{ updatedAgo }}</div>
+        </div>
+        <button onClick="{{ refresh }}" style="display:flex;align-items:center;gap:7px;background:#161b24;color:#cdd6e1;border:1px solid #2c3744;padding:8px 13px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;" style-hover="background:#1c232e;border-color:#3a4757;color:#fff;">
+          <span style="{{ spinStyle }}">⟳</span> Atualizar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main style="max-width:1280px;margin:0 auto;padding:24px;">
+
+    <section style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px;">
+      <div style="flex:1;min-width:280px;position:relative;display:flex;align-items:center;">
+        <span style="position:absolute;left:15px;color:#5f6b7a;font-size:16px;pointer-events:none;">⌕</span>
+        <input value="{{ query }}" onInput="{{ onSearch }}" placeholder="Buscar por código, descrição ou localização…" style="width:100%;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:13px 14px 13px 42px;font-size:14px;outline:none;letter-spacing:.2px;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
+        <sc-if value="{{ hasQuery }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ clearQuery }}" style="position:absolute;right:10px;background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;" style-hover="color:#fff;border-color:#3a4757;">✕</button>
+        </sc-if>
+      </div>
+      <div style="display:flex;background:#11151c;border:1px solid #2c3744;padding:3px;gap:2px;">
+        <sc-for list="{{ fields }}" as="f" hint-placeholder-count="4">
+          <button onClick="{{ f.onClick }}" style="{{ f.style }}">{{ f.label }}</button>
+        </sc-for>
+      </div>
+      <button onClick="{{ toggleLow }}" style="{{ lowToggleStyle }}">
+        <span style="font-size:13px;">▲</span> Só estoque baixo
+      </button>
+    </section>
+
+    <section style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+      <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4">
+        <div style="background:#11151c;border:1px solid #222b37;border-left:3px solid #2c3744;padding:14px 16px;">
+          <div style="font-size:10.5px;font-weight:600;letter-spacing:1.2px;color:#6b7889;text-transform:uppercase;">{{ t.label }}</div>
+          <div style="{{ t.numStyle }}">{{ t.value }}</div>
+          <div style="font-size:11px;color:#5f6b7a;margin-top:2px;">{{ t.sub }}</div>
+        </div>
+      </sc-for>
+    </section>
+
+    <section style="background:#0d1118;border:1px solid #222b37;">
+      <div style="overflow-x:auto;">
+        <div style="min-width:960px;">
+
+          <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;position:sticky;top:65px;z-index:10;">
+            <div></div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;font-family:'IBM Plex Mono',monospace;">COD.</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">DESCRIÇÃO</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">TOTAL UN</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">P/ CX</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. FECH.</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. ABERTA</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">LOCALIZAÇÃO</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">ATUALIZAÇÃO</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:center;">VER.</div>
+          </div>
+
+          <sc-for list="{{ skeleton }}" as="s" hint-placeholder-count="0">
+            <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;">
+              <div></div>
+              <div style="padding:14px 10px;"><div style="height:13px;width:48px;background:linear-gradient(90deg,#161b24,#1e2531,#161b24);background-size:340px 100%;animation:shimmer 1.3s infinite;"></div></div>
+              <div style="padding:14px 10px;"><div style="height:13px;width:75%;background:linear-gradient(90deg,#161b24,#1e2531,#161b24);background-size:340px 100%;animation:shimmer 1.3s infinite;"></div></div>
+              <div style="padding:14px 10px;"></div><div></div><div></div><div></div><div></div><div></div><div></div>
+            </div>
+          </sc-for>
+
+          <sc-for list="{{ rows }}" as="p" hint-placeholder-count="0">
+            <div style="{{ p.rowStyle }}" style-hover="background:#141a23;">
+              <div style="{{ p.barStyle }}"></div>
+              <div style="padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:#9fc1ff;letter-spacing:.3px;">{{ p.cod }}</div>
+              <div style="padding:13px 10px;font-size:13px;color:#dbe3ec;line-height:1.4;text-wrap:pretty;">{{ p.desc }}</div>
+              <div style="{{ p.totalStyle }}">{{ p.totalDisp }}</div>
+              <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#8b97a6;">{{ p.porCx }}</div>
+              <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#aeb9c6;">{{ p.cFechada }}</div>
+              <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#aeb9c6;">{{ p.cAberta }}</div>
+              <div style="padding:13px 10px;display:flex;flex-wrap:wrap;gap:4px;">
+                <sc-for list="{{ p.locals }}" as="loc" hint-placeholder-count="0">
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;color:#cdd6e1;background:#1b222d;border:1px solid #2c3744;padding:2px 7px;letter-spacing:.5px;">{{ loc }}</span>
+                </sc-for>
+                <sc-if value="{{ p.noLocal }}" hint-placeholder-val="{{ false }}">
+                  <span style="color:#46505e;font-size:13px;">—</span>
+                </sc-if>
+              </div>
+              <div style="padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b97a6;">{{ p.atualizacao }}</div>
+              <div style="padding:13px 10px;display:flex;justify-content:center;">
+                <sc-if value="{{ p.verified }}" hint-placeholder-val="{{ false }}">
+                  <span style="color:#35d49a;font-size:14px;">✓</span>
+                </sc-if>
+                <sc-if value="{{ p.notVerified }}" hint-placeholder-val="{{ true }}">
+                  <span style="color:#46505e;font-size:13px;">·</span>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:60px 20px;text-align:center;">
+              <div style="font-size:32px;color:#2c3744;margin-bottom:10px;">⌕</div>
+              <div style="font-size:14px;color:#8b97a6;">Nenhum produto encontrado{{ emptySuffix }}</div>
+              <div style="font-size:12px;color:#5f6b7a;margin-top:5px;">Tente outro código, descrição ou localização.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ hasError }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:48px 20px;text-align:center;">
+              <div style="font-size:13px;color:#ef5d5d;font-weight:600;margin-bottom:6px;">Não foi possível carregar a planilha</div>
+              <div style="font-size:12px;color:#8b97a6;max-width:440px;margin:0 auto;line-height:1.5;">{{ errorMsg }}</div>
+              <button onClick="{{ refresh }}" style="margin-top:16px;background:#161b24;color:#cdd6e1;border:1px solid #2c3744;padding:9px 18px;font-size:12px;cursor:pointer;" style-hover="border-color:#3a4757;color:#fff;">Tentar novamente</button>
+            </div>
+          </sc-if>
+
+        </div>
+      </div>
+    </section>
+
+    <footer style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:14px 4px 4px;font-size:11.5px;color:#5f6b7a;">
+      <div>{{ resultText }}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="width:5px;height:5px;background:#35d49a;border-radius:50%;"></span>
+        Sincroniza automaticamente a cada 60s · Estoque baixo abaixo de {{ threshold }} un.
+      </div>
+    </footer>
+
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:820}}">
+class Component extends DCLogic {
+  state = {
+    raw: [],
+    query: "",
+    field: "todos",
+    onlyLow: false,
+    threshold: 50,
+    loading: true,
+    error: null,
+    lastUpdated: null,
+    refreshing: false,
+    tick: 0,
+  };
+
+  SHEET = "1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ";
+  GID = "961434769";
+
+  componentDidMount() {
+    this.load();
+    this._poll = setInterval(() => this.load(true), 60000);
+    this._tick = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
+  }
+  componentWillUnmount() {
+    clearInterval(this._poll);
+    clearInterval(this._tick);
+  }
+
+  cell(c) {
+    if (!c) return "";
+    if (c.f != null && c.f !== "") return String(c.f);
+    if (c.v != null) return String(c.v);
+    return "";
+  }
+  toNum(str) {
+    const d = String(str == null ? "" : str).replace(/[^\d]/g, "");
+    return d ? parseInt(d, 10) : 0;
+  }
+
+  async load(isAuto) {
+    this.setState({ refreshing: true });
+    try {
+      const url = "https://docs.google.com/spreadsheets/d/" + this.SHEET +
+        "/gviz/tq?tqx=out:json&gid=" + this.GID + "&headers=0&_=" + Date.now();
+      const res = await fetch(url);
+      const text = await res.text();
+      const start = text.indexOf("{");
+      const end = text.lastIndexOf("}");
+      const json = JSON.parse(text.substring(start, end + 1));
+      const grid = (json.table.rows || []).map(r => (r.c || []).map(c => this.cell(c)));
+
+      const products = [];
+      for (const r of grid) {
+        const cod = (r[0] || "").trim();
+        const desc = (r[1] || "").trim();
+        if (!desc) continue;
+        const cu = cod.toUpperCase();
+        if (cu === "COD." || cu === "COD" || desc.toUpperCase() === "DESCRICAO" || desc.toUpperCase() === "DESCRIÇÃO") continue;
+        if (cu === "ESTOQUE MKT") continue;
+        const localRaw = (r[6] || "").trim();
+        const verif = (r[8] || "").trim();
+        products.push({
+          cod: cod || "—",
+          desc,
+          totalDisp: (r[2] || "").trim() || "0",
+          totalNum: this.toNum(r[2]),
+          porCx: (r[3] || "").trim() || "—",
+          cFechada: (r[4] || "").trim() || "0",
+          cAberta: (r[5] || "").trim() || "0",
+          locals: localRaw ? localRaw.split(/[,/]+/).map(x => x.trim()).filter(Boolean) : [],
+          noLocal: !localRaw,
+          atualizacao: (r[7] || "").trim() || "—",
+          verified: !!verif && verif !== "0",
+          notVerified: !verif || verif === "0",
+        });
+      }
+      this.setState({ raw: products, loading: false, error: null, lastUpdated: Date.now(), refreshing: false });
+    } catch (e) {
+      this.setState({
+        loading: false,
+        refreshing: false,
+        error: "Verifique se a planilha está compartilhada como \"qualquer pessoa com o link pode ver\". Detalhe técnico: " + (e && e.message ? e.message : e),
+      });
+    }
+  }
+
+  fieldButton(key, label) {
+    const active = this.state.field === key;
+    const base = "border:none;cursor:pointer;padding:9px 14px;font-size:12px;font-weight:600;letter-spacing:.3px;white-space:nowrap;";
+    const style = active
+      ? base + "background:#2f6df0;color:#fff;"
+      : base + "background:transparent;color:#8b97a6;";
+    return { key, label, style, onClick: () => this.setState({ field: key }) };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const thr = Number(s.threshold) || 0;
+    const q = s.query.trim().toLowerCase();
+
+    let list = s.raw.map(p => ({ ...p, low: p.totalNum > 0 && p.totalNum < thr }));
+
+    if (q) {
+      list = list.filter(p => {
+        if (s.field === "cod") return p.cod.toLowerCase().includes(q);
+        if (s.field === "desc") return p.desc.toLowerCase().includes(q);
+        if (s.field === "local") return p.locals.join(" ").toLowerCase().includes(q);
+        return (p.cod + " " + p.desc + " " + p.locals.join(" ")).toLowerCase().includes(q);
+      });
+    }
+    if (s.onlyLow) list = list.filter(p => p.low);
+
+    const rowBase = "display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;transition:background .12s;";
+    const rows = list.map(p => {
+      const totalBase = "padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;letter-spacing:.3px;";
+      return {
+        ...p,
+        rowStyle: rowBase + (p.low ? "background:rgba(243,167,64,.05);" : ""),
+        barStyle: "align-self:stretch;background:" + (p.low ? "#f3a740" : "transparent") + ";",
+        totalStyle: totalBase + "color:" + (p.low ? "#f3a740" : "#eef3f8") + ";",
+      };
+    });
+
+    // stats from full dataset
+    const totalItens = s.raw.length;
+    const totalUn = s.raw.reduce((a, p) => a + p.totalNum, 0);
+    const lowCount = s.raw.filter(p => p.totalNum > 0 && p.totalNum < thr).length;
+    const locSet = new Set();
+    s.raw.forEach(p => p.locals.forEach(l => locSet.add(l.toUpperCase())));
+
+    const numBase = "font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:-.5px;margin-top:6px;line-height:1;";
+    const fmt = n => n.toLocaleString("pt-BR");
+
+    const tiles = [
+      { label: "Itens cadastrados", value: fmt(totalItens), sub: "produtos na aba", numStyle: numBase + "color:#eef3f8;" },
+      { label: "Unidades em estoque", value: fmt(totalUn), sub: "soma do total un.", numStyle: numBase + "color:#9fc1ff;" },
+      { label: "Estoque baixo", value: fmt(lowCount), sub: "abaixo de " + thr + " un.", numStyle: numBase + (lowCount > 0 ? "color:#f3a740;" : "color:#5f6b7a;") },
+      { label: "Localizações", value: fmt(locSet.size), sub: "endereços distintos", numStyle: numBase + "color:#eef3f8;" },
+    ];
+
+    // updated time
+    let updatedTime = "—", updatedAgo = "aguardando…";
+    if (s.lastUpdated) {
+      const d = new Date(s.lastUpdated);
+      updatedTime = d.toLocaleTimeString("pt-BR");
+      const secs = Math.max(0, Math.floor((Date.now() - s.lastUpdated) / 1000));
+      updatedAgo = secs < 5 ? "agora mesmo" : secs < 60 ? "há " + secs + "s" : "há " + Math.floor(secs / 60) + " min";
+    }
+
+    const lowBase = "display:flex;align-items:center;gap:7px;border:1px solid #2c3744;padding:9px 14px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;white-space:nowrap;";
+    const lowToggleStyle = s.onlyLow
+      ? lowBase + "background:rgba(243,167,64,.12);color:#f3a740;border-color:#7a5a23;"
+      : lowBase + "background:#11151c;color:#8b97a6;";
+
+    const resultText = s.loading
+      ? "Carregando dados…"
+      : "Mostrando " + list.length + " de " + s.raw.length + " itens" + (q ? " · filtro \"" + s.query.trim() + "\"" : "");
+
+    return {
+      query: s.query,
+      hasQuery: q.length > 0,
+      threshold: s.threshold,
+      fields: [
+        this.fieldButton("todos", "Todos"),
+        this.fieldButton("cod", "Código"),
+        this.fieldButton("desc", "Descrição"),
+        this.fieldButton("local", "Local"),
+      ],
+      lowToggleStyle,
+      tiles,
+      rows,
+      skeleton: s.loading ? [1, 2, 3, 4, 5, 6, 7, 8] : [],
+      isEmpty: !s.loading && !s.error && list.length === 0,
+      emptySuffix: q ? " para \"" + s.query.trim() + "\"" : (s.onlyLow ? " com estoque baixo" : ""),
+      hasError: !!s.error && !s.loading,
+      errorMsg: s.error || "",
+      resultText,
+      live: !s.error,
+      offline: !!s.error,
+      liveLabel: s.error ? "OFFLINE" : (s.refreshing ? "SINCRONIZANDO" : "AO VIVO"),
+      updatedTime,
+      updatedAgo,
+      spinStyle: s.refreshing ? "display:inline-block;animation:spin .8s linear infinite;font-size:14px;" : "display:inline-block;font-size:14px;",
+      onSearch: e => this.setState({ query: e.target.value }),
+      clearQuery: () => this.setState({ query: "" }),
+      toggleLow: () => this.setState(st => ({ onlyLow: !st.onlyLow })),
+      refresh: () => this.load(),
+    };
+  }
+}
+</script>
+</body>
+</html>
