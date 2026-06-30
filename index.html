@@ -133,7 +133,7 @@
           <sc-for list="{{ rows }}" as="p" hint-placeholder-count="0">
             <div style="{{ p.rowStyle }}" style-hover="background:#141a23;">
               <div style="{{ p.barStyle }}"></div>
-              <div style="padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:#9fc1ff;letter-spacing:.3px;">{{ p.cod }}</div>
+              <div style="{{ p.codStyle }}">{{ p.cod }}</div>
               <div style="padding:13px 10px;font-size:13px;color:#dbe3ec;line-height:1.4;text-wrap:pretty;">{{ p.desc }}</div>
               <div style="{{ p.totalStyle }}">{{ p.totalDisp }}</div>
               <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#8b97a6;">{{ p.porCx }}</div>
@@ -344,7 +344,10 @@ class Component extends DCLogic {
     const thr = Number(s.threshold) || 0;
     const q = s.query.trim().toLowerCase();
 
-    let list = s.raw.map(p => ({ ...p, low: p.totalNum > 0 && p.totalNum < thr }));
+    const codeCounts = {};
+    s.raw.forEach(p => { if (p.cod && p.cod !== "—") codeCounts[p.cod] = (codeCounts[p.cod] || 0) + 1; });
+
+    let list = s.raw.map(p => ({ ...p, low: p.totalNum > 0 && p.totalNum < thr, dup: !!(p.cod && p.cod !== "—" && codeCounts[p.cod] > 1) }));
 
     if (q) {
       list = list.filter(p => {
@@ -361,9 +364,10 @@ class Component extends DCLogic {
       const totalBase = "padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;letter-spacing:.3px;";
       return {
         ...p,
-        rowStyle: rowBase + (p.low ? "background:rgba(243,167,64,.05);" : ""),
-        barStyle: "align-self:stretch;background:" + (p.low ? "#f3a740" : "transparent") + ";",
+        rowStyle: rowBase + (p.dup ? "background:rgba(239,93,93,.12);" : (p.low ? "background:rgba(243,167,64,.05);" : "")),
+        barStyle: "align-self:stretch;background:" + (p.dup ? "#ef5d5d" : (p.low ? "#f3a740" : "transparent")) + ";",
         totalStyle: totalBase + "color:" + (p.low ? "#f3a740" : "#eef3f8") + ";",
+        codStyle: "padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.3px;color:" + (p.dup ? "#ef5d5d" : "#9fc1ff") + ";",
       };
     });
 
