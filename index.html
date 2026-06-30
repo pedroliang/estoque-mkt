@@ -301,7 +301,7 @@ class Component extends DCLogic {
         if (!desc) continue;
         const cu = cod.toUpperCase();
         if (cu === "COD." || cu === "COD" || desc.toUpperCase() === "DESCRICAO" || desc.toUpperCase() === "DESCRIÇÃO") continue;
-        if (cu === "ESTOQUE MKT") continue;
+        if (cu === "ESTOQUE MKT" || desc.toUpperCase() === "ESTOQUE MKT") continue;
         const localRaw = (r[6] || "").trim();
         const verif = (r[8] || "").trim().toUpperCase();
         const isVer = verif === "TRUE" || verif === "1" || verif === "VERDADEIRO" || verif === "SIM" || verif === "X" || verif === "✓" || verif === "YES" || verif === "Y";
