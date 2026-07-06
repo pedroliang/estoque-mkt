@@ -92,7 +92,58 @@
       <button onClick="{{ exportPdf }}" title="Exportar todos os itens para PDF" style="display:flex;align-items:center;gap:7px;background:#211414;color:#e0816f;border:1px solid #5a2e26;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;" style-hover="background:#2c1a17;border-color:#7a3d32;color:#ef9a86;">
         <span style="font-size:13px;">▦</span> PDF
       </button>
+      <button onClick="{{ toggleBaixa }}" title="Dar baixa no estoque colando SKU e quantidade" style="{{ baixaBtnStyle }}">
+        <span style="font-size:13px;">⇩</span> Baixa
+      </button>
     </section>
+
+    <sc-if value="{{ baixaOpen }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#0d1118;border:1px solid #2c3744;border-left:3px solid #2f6df0;margin-bottom:18px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #1c232e;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1.2px;color:#f2f6fb;">BAIXA DE ESTOQUE</div>
+            <div style="font-size:11.5px;color:#6b7889;margin-top:3px;line-height:1.5;">Cole (Ctrl+V) as colunas SKU e quantidade copiadas do Excel/Google Sheets. A simulação aparece abaixo e na tabela principal. Nada é gravado até você aprovar.</div>
+          </div>
+          <button onClick="{{ toggleBaixa }}" style="background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;flex:none;" style-hover="color:#fff;border-color:#3a4757;">✕</button>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+          <textarea value="{{ baixaText }}" onChange="{{ onBaixaText }}" spellcheck="false" placeholder="Cole aqui, ex.:&#10;A102&#9;10&#10;B205&#9;4" style="width:100%;min-height:110px;resize:vertical;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)"></textarea>
+
+          <sc-if value="{{ hasBaixaItems }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:11.5px;color:#8b97a6;letter-spacing:.3px;">{{ baixaSummary }}</div>
+
+            <sc-if value="{{ baixaHasNeg }}" hint-placeholder-val="{{ false }}">
+              <div style="background:rgba(239,93,93,.12);border:1px solid #5a2626;border-left:3px solid #ef5d5d;padding:10px 14px;font-size:12px;color:#ef9a9a;line-height:1.6;">
+                <strong style="color:#ef5d5d;">SKUs que ficarão NEGATIVOS:</strong> {{ baixaNegText }}
+              </div>
+            </sc-if>
+
+            <div style="border:1px solid #1c232e;">
+              <div style="display:grid;grid-template-columns:100px minmax(180px,1fr) 90px 90px 100px;gap:8px;padding:9px 12px;background:#12161e;border-bottom:1px solid #222b37;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">
+                <div>SKU</div><div>DESCRIÇÃO</div><div style="text-align:right;">ATUAL</div><div style="text-align:right;">BAIXA</div><div style="text-align:right;">RESULTADO</div>
+              </div>
+              <sc-for list="{{ baixaItems }}" as="b" hint-placeholder-count="0">
+                <div style="{{ b.style }}">
+                  <div style="{{ b.codStyle }}">{{ b.cod }}</div>
+                  <div style="color:#aeb9c6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ b.desc }}</div>
+                  <div style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#aeb9c6;">{{ b.curDisp }}</div>
+                  <div style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#f3a740;">{{ b.qtyDisp }}</div>
+                  <div style="{{ b.resStyle }}">{{ b.resDisp }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <button onClick="{{ approveBaixa }}" style="{{ approveStyle }}">✓ {{ approveLabel }}</button>
+              <button onClick="{{ clearBaixa }}" style="background:#161b24;color:#8b97a6;border:1px solid #2c3744;padding:10px 16px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;" style-hover="color:#fff;border-color:#3a4757;">Limpar simulação</button>
+              <sc-if value="{{ applyMsgShow }}" hint-placeholder-val="{{ false }}">
+                <span style="{{ applyMsgStyle }}">{{ applyMsg }}</span>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </section>
+    </sc-if>
 
     <section style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
       <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4">
@@ -203,10 +254,17 @@ class Component extends DCLogic {
     lastUpdated: null,
     refreshing: false,
     tick: 0,
+    baixaOpen: false,
+    baixaText: "",
+    applying: false,
+    applyMsg: null,
   };
 
   SHEET = "1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ";
   GID = "961434769";
+  // URL do Web App do Google Apps Script — necessária para o botão "Aprovar mudanças"
+  // gravar na planilha. Veja o passo a passo em apps-script-instrucoes.md.
+  SCRIPT_URL = "";
 
   componentDidMount() {
     this.load();
@@ -227,6 +285,75 @@ class Component extends DCLogic {
   toNum(str) {
     const d = String(str == null ? "" : str).replace(/[^\d]/g, "");
     return d ? parseInt(d, 10) : 0;
+  }
+
+  // Interpreta o texto colado (Ctrl+V): uma linha por item, SKU + quantidade,
+  // separados por tab (Excel/Sheets), ";", "," ou espaços. Soma SKUs repetidos
+  // e cruza com o estoque atual para calcular o saldo resultante.
+  computeBaixa(s) {
+    const map = new Map();
+    const items = [];
+    for (const rawLine of String(s.baixaText || "").split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line) continue;
+      let parts;
+      if (line.includes("\t")) parts = line.split("\t");
+      else if (line.includes(";")) parts = line.split(";");
+      else if (line.includes(",")) parts = line.split(",");
+      else parts = line.split(/\s+/);
+      parts = parts.map(x => x.trim()).filter(Boolean);
+      if (parts.length < 2) continue;
+      const cod = parts[0];
+      const qtyStr = parts[parts.length - 1];
+      if (!/\d/.test(qtyStr)) continue; // cabeçalho ou linha inválida
+      const qty = this.toNum(qtyStr);
+      const key = cod.toUpperCase();
+      if (map.has(key)) map.get(key).qty += qty;
+      else { const it = { cod, qty }; map.set(key, it); items.push(it); }
+    }
+    const byCod = new Map();
+    s.raw.forEach(p => {
+      const k = (p.cod || "").toUpperCase();
+      if (k && k !== "—" && !byCod.has(k)) byCod.set(k, p);
+    });
+    return items.map(it => {
+      const p = byCod.get(it.cod.toUpperCase());
+      if (!p) return { ...it, found: false, desc: "", cur: null, result: null, neg: false };
+      const result = p.totalNum - it.qty;
+      return { ...it, found: true, desc: p.desc, cur: p.totalNum, result, neg: result < 0 };
+    });
+  }
+
+  async approveBaixa(items) {
+    if (!this.SCRIPT_URL) {
+      alert("Para gravar na planilha, configure a SCRIPT_URL no topo do código.\n\nSiga o passo a passo do arquivo apps-script-instrucoes.md (publicar o Apps Script como Web App e colar a URL gerada).");
+      return;
+    }
+    const found = items.filter(i => i.found);
+    if (!found.length) { alert("Nenhum SKU válido para aplicar."); return; }
+    const negs = found.filter(i => i.neg);
+    if (negs.length) {
+      const msg = "ATENÇÃO: " + negs.length + " SKU(s) ficarão NEGATIVOS:\n\n" +
+        negs.map(n => n.cod + ": " + n.cur + " − " + n.qty + " = " + n.result).join("\n") +
+        "\n\nAplicar mesmo assim?";
+      if (!confirm(msg)) return;
+    }
+    this.setState({ applying: true, applyMsg: null });
+    try {
+      const res = await fetch(this.SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ changes: found.map(i => ({ cod: i.cod, subtract: i.qty, newTotal: i.result })) }),
+      });
+      const out = await res.json();
+      if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida do Apps Script");
+      const n = out.updated ? out.updated.length : found.length;
+      const nf = out.notFound && out.notFound.length ? " · não encontrados na planilha: " + out.notFound.join(", ") : "";
+      this.setState({ applying: false, applyMsg: "✓ " + n + " SKU(s) atualizados na planilha." + nf, baixaText: "" });
+      this.load(true);
+    } catch (e) {
+      this.setState({ applying: false, applyMsg: "Erro ao gravar: " + (e && e.message ? e.message : e) });
+    }
   }
 
   exportStamp() {
@@ -347,6 +474,11 @@ class Component extends DCLogic {
     const codeCounts = {};
     s.raw.forEach(p => { if (p.cod && p.cod !== "—") codeCounts[p.cod] = (codeCounts[p.cod] || 0) + 1; });
 
+    // ---- baixa de estoque (simulação) ----
+    const baixaAll = s.baixaOpen ? this.computeBaixa(s) : [];
+    const simMap = new Map();
+    baixaAll.forEach(b => { if (b.found) simMap.set(b.cod.toUpperCase(), b); });
+
     let list = s.raw.map(p => ({ ...p, low: p.totalNum > 0 && p.totalNum < thr, dup: !!(p.cod && p.cod !== "—" && codeCounts[p.cod] > 1) }));
 
     if (q) {
@@ -362,12 +494,21 @@ class Component extends DCLogic {
     const rowBase = "display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;transition:background .12s;";
     const rows = list.map(p => {
       const totalBase = "padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;letter-spacing:.3px;";
+      const sim = simMap.get((p.cod || "").toUpperCase());
+      const simNeg = !!(sim && sim.neg);
+      const rowBg = simNeg ? "background:rgba(239,93,93,.16);"
+        : sim ? "background:rgba(47,109,240,.08);"
+        : p.dup ? "background:rgba(239,93,93,.12);"
+        : p.low ? "background:rgba(243,167,64,.05);" : "";
+      const barColor = simNeg ? "#ef5d5d" : sim ? "#2f6df0" : p.dup ? "#ef5d5d" : p.low ? "#f3a740" : "transparent";
+      const totalColor = simNeg ? "#ef5d5d" : sim ? "#9fc1ff" : p.low ? "#f3a740" : "#eef3f8";
       return {
         ...p,
-        rowStyle: rowBase + (p.dup ? "background:rgba(239,93,93,.12);" : (p.low ? "background:rgba(243,167,64,.05);" : "")),
-        barStyle: "align-self:stretch;background:" + (p.dup ? "#ef5d5d" : (p.low ? "#f3a740" : "transparent")) + ";",
-        totalStyle: totalBase + "color:" + (p.low ? "#f3a740" : "#eef3f8") + ";",
-        codStyle: "padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.3px;color:" + (p.dup ? "#ef5d5d" : "#9fc1ff") + ";",
+        totalDisp: sim ? p.totalNum.toLocaleString("pt-BR") + " → " + sim.result.toLocaleString("pt-BR") : p.totalDisp,
+        rowStyle: rowBase + rowBg,
+        barStyle: "align-self:stretch;background:" + barColor + ";",
+        totalStyle: totalBase + "color:" + totalColor + ";",
+        codStyle: "padding:13px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.3px;color:" + ((simNeg || p.dup) ? "#ef5d5d" : "#9fc1ff") + ";",
       };
     });
 
@@ -406,7 +547,52 @@ class Component extends DCLogic {
       ? "Carregando dados…"
       : "Mostrando " + list.length + " de " + s.raw.length + " itens" + (q ? " · filtro \"" + s.query.trim() + "\"" : "");
 
+    // ---- painel de baixa: view models ----
+    const negList = baixaAll.filter(b => b.neg);
+    const nfList = baixaAll.filter(b => !b.found);
+    const itemRowBase = "display:grid;grid-template-columns:100px minmax(180px,1fr) 90px 90px 100px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #161b24;font-size:12.5px;";
+    const baixaItems = baixaAll.map(b => ({
+      cod: b.cod,
+      desc: b.found ? b.desc : "SKU não encontrado na planilha",
+      curDisp: b.found ? fmt(b.cur) : "—",
+      qtyDisp: "−" + fmt(b.qty),
+      resDisp: b.found ? fmt(b.result) : "—",
+      style: itemRowBase + (b.neg ? "background:rgba(239,93,93,.14);" : (!b.found ? "background:rgba(243,167,64,.10);" : "")),
+      codStyle: "font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.3px;color:" + ((b.neg || !b.found) ? "#ef5d5d" : "#9fc1ff") + ";",
+      resStyle: "text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:600;color:" + (b.neg ? "#ef5d5d" : "#35d49a") + ";",
+    }));
+
+    const baixaBtnBase = "display:flex;align-items:center;gap:7px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;white-space:nowrap;border:1px solid;";
+    const baixaBtnStyle = s.baixaOpen
+      ? baixaBtnBase + "background:#2f6df0;color:#fff;border-color:#4d82ff;"
+      : baixaBtnBase + "background:#131a2b;color:#7fa5f5;border-color:#2a3d66;";
+
+    const approveBase = "display:flex;align-items:center;gap:7px;padding:10px 18px;font-size:12.5px;font-weight:600;letter-spacing:.4px;border:1px solid;";
+    const approveStyle = s.applying
+      ? approveBase + "background:#173026;color:#3a6b55;border-color:#245741;cursor:wait;"
+      : approveBase + "background:#1a5c3f;color:#c6f2dd;border-color:#2f9166;cursor:pointer;";
+
+    const applyOk = (s.applyMsg || "").indexOf("✓") === 0;
+    const applyMsgStyle = "font-size:12px;line-height:1.5;color:" + (applyOk ? "#35d49a" : "#ef5d5d") + ";";
+
     return {
+      baixaOpen: s.baixaOpen,
+      baixaText: s.baixaText,
+      baixaBtnStyle,
+      baixaItems,
+      hasBaixaItems: baixaAll.length > 0,
+      baixaSummary: baixaAll.length + " SKU(s) colado(s) · " + negList.length + " negativo(s) · " + nfList.length + " não encontrado(s)",
+      baixaHasNeg: negList.length > 0,
+      baixaNegText: negList.map(b => b.cod + " (" + fmt(b.result) + ")").join(", "),
+      approveStyle,
+      approveLabel: s.applying ? "Gravando na planilha…" : "Aprovar mudanças",
+      applyMsgShow: !!s.applyMsg,
+      applyMsg: s.applyMsg || "",
+      applyMsgStyle,
+      toggleBaixa: () => this.setState(st => ({ baixaOpen: !st.baixaOpen, applyMsg: null })),
+      onBaixaText: e => this.setState({ baixaText: e.target.value, applyMsg: null }),
+      clearBaixa: () => this.setState({ baixaText: "", applyMsg: null }),
+      approveBaixa: () => this.approveBaixa(baixaAll),
       query: s.query,
       hasQuery: q.length > 0,
       threshold: s.threshold,
