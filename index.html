@@ -93,7 +93,7 @@
         <span style="font-size:13px;">▦</span> PDF
       </button>
       <button onClick="{{ toggleBaixa }}" title="Dar baixa no estoque colando SKU e quantidade" style="{{ baixaBtnStyle }}">
-        <span style="font-size:13px;">⇩</span> Baixa
+        <span style="font-size:13px;">⇅</span> Ajuste
       </button>
     </section>
 
@@ -101,12 +101,16 @@
       <section style="background:#0d1118;border:1px solid #2c3744;border-left:3px solid #2f6df0;margin-bottom:18px;">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #1c232e;">
           <div>
-            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1.2px;color:#f2f6fb;">BAIXA DE ESTOQUE</div>
-            <div style="font-size:11.5px;color:#6b7889;margin-top:3px;line-height:1.5;">Cole (Ctrl+V) as colunas SKU e quantidade copiadas do Excel/Google Sheets. A simulação aparece abaixo e na tabela principal. Nada é gravado até você aprovar.</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1.2px;color:#f2f6fb;">{{ baixaTitle }}</div>
+            <div style="font-size:11.5px;color:#6b7889;margin-top:3px;line-height:1.5;">{{ baixaHint }}</div>
           </div>
           <button onClick="{{ toggleBaixa }}" style="background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;flex:none;" style-hover="color:#fff;border-color:#3a4757;">✕</button>
         </div>
         <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;gap:2px;background:#11151c;border:1px solid #2c3744;padding:3px;align-self:flex-start;">
+            <button onClick="{{ modeSaida }}" style="{{ modeSaidaStyle }}">− Baixa (subtrair)</button>
+            <button onClick="{{ modeEntrada }}" style="{{ modeEntradaStyle }}">+ Entrada (somar)</button>
+          </div>
           <textarea value="{{ baixaText }}" onChange="{{ onBaixaText }}" spellcheck="false" placeholder="Cole aqui, ex.:&#10;A102&#9;10&#10;B205&#9;4" style="width:100%;min-height:110px;resize:vertical;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)"></textarea>
 
           <sc-if value="{{ hasBaixaItems }}" hint-placeholder-val="{{ false }}">
@@ -120,14 +124,14 @@
 
             <div style="border:1px solid #1c232e;">
               <div style="display:grid;grid-template-columns:100px minmax(180px,1fr) 90px 90px 100px;gap:8px;padding:9px 12px;background:#12161e;border-bottom:1px solid #222b37;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">
-                <div>SKU</div><div>DESCRIÇÃO</div><div style="text-align:right;">ATUAL</div><div style="text-align:right;">BAIXA</div><div style="text-align:right;">RESULTADO</div>
+                <div>SKU</div><div>DESCRIÇÃO</div><div style="text-align:right;">ATUAL</div><div style="text-align:right;">{{ qtyColLabel }}</div><div style="text-align:right;">RESULTADO</div>
               </div>
               <sc-for list="{{ baixaItems }}" as="b" hint-placeholder-count="0">
                 <div style="{{ b.style }}">
                   <div style="{{ b.codStyle }}">{{ b.cod }}</div>
                   <div style="color:#aeb9c6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ b.desc }}</div>
                   <div style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#aeb9c6;">{{ b.curDisp }}</div>
-                  <div style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#f3a740;">{{ b.qtyDisp }}</div>
+                  <div style="{{ b.qtyStyle }}">{{ b.qtyDisp }}</div>
                   <div style="{{ b.resStyle }}">{{ b.resDisp }}</div>
                 </div>
               </sc-for>
@@ -255,6 +259,7 @@ class Component extends DCLogic {
     refreshing: false,
     tick: 0,
     baixaOpen: false,
+    baixaMode: "saida",
     baixaText: "",
     applying: false,
     applyMsg: null,
@@ -319,7 +324,7 @@ class Component extends DCLogic {
     return items.map(it => {
       const p = byCod.get(it.cod.toUpperCase());
       if (!p) return { ...it, found: false, desc: "", cur: null, result: null, neg: false };
-      const result = p.totalNum - it.qty;
+      const result = s.baixaMode === "entrada" ? p.totalNum + it.qty : p.totalNum - it.qty;
       return { ...it, found: true, desc: p.desc, cur: p.totalNum, result, neg: result < 0 };
     });
   }
@@ -343,7 +348,8 @@ class Component extends DCLogic {
     const parts = [];
     if (skippedNeg.length) parts.push(skippedNeg.length + " SKU(s) serão IGNORADOS por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
     if (skippedNf.length) parts.push(skippedNf.length + " SKU(s) não encontrados serão ignorados: " + skippedNf.map(x => x.cod).join(", "));
-    const msg = "Aplicar baixa em " + apply.length + " SKU(s)?" + (parts.length ? "\n\n" + parts.join("\n\n") : "");
+    const acao = this.state.baixaMode === "entrada" ? "ENTRADA (+)" : "BAIXA (−)";
+    const msg = "Aplicar " + acao + " em " + apply.length + " SKU(s)?" + (parts.length ? "\n\n" + parts.join("\n\n") : "");
     if (!confirm(msg)) return;
     this.setState({ applying: true, applyMsg: null });
     try {
@@ -565,7 +571,8 @@ class Component extends DCLogic {
       cod: b.cod,
       desc: b.found ? b.desc : "SKU não encontrado na planilha",
       curDisp: b.found ? fmt(b.cur) : "—",
-      qtyDisp: "−" + fmt(b.qty),
+      qtyDisp: (s.baixaMode === "entrada" ? "+" : "−") + fmt(b.qty),
+      qtyStyle: "text-align:right;font-family:'IBM Plex Mono',monospace;color:" + (s.baixaMode === "entrada" ? "#35d49a" : "#f3a740") + ";",
       resDisp: b.found ? fmt(b.result) : "—",
       style: itemRowBase + (b.neg ? "background:rgba(239,93,93,.14);" : (!b.found ? "background:rgba(243,167,64,.10);" : "")),
       codStyle: "font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.3px;color:" + ((b.neg || !b.found) ? "#ef5d5d" : "#9fc1ff") + ";",
@@ -576,6 +583,14 @@ class Component extends DCLogic {
     const baixaBtnStyle = s.baixaOpen
       ? baixaBtnBase + "background:#2f6df0;color:#fff;border-color:#4d82ff;"
       : baixaBtnBase + "background:#131a2b;color:#7fa5f5;border-color:#2a3d66;";
+
+    const modeBase = "border:none;cursor:pointer;padding:8px 14px;font-size:12px;font-weight:600;letter-spacing:.3px;white-space:nowrap;";
+    const modeSaidaStyle = s.baixaMode !== "entrada"
+      ? modeBase + "background:#5a2626;color:#ffb0b0;"
+      : modeBase + "background:transparent;color:#8b97a6;";
+    const modeEntradaStyle = s.baixaMode === "entrada"
+      ? modeBase + "background:#1a5c3f;color:#c6f2dd;"
+      : modeBase + "background:transparent;color:#8b97a6;";
 
     const approveBase = "display:flex;align-items:center;gap:7px;padding:10px 18px;font-size:12.5px;font-weight:600;letter-spacing:.4px;border:1px solid;";
     const approveStyle = s.applying
@@ -589,6 +604,15 @@ class Component extends DCLogic {
       baixaOpen: s.baixaOpen,
       baixaText: s.baixaText,
       baixaBtnStyle,
+      baixaTitle: s.baixaMode === "entrada" ? "ENTRADA DE ESTOQUE" : "BAIXA DE ESTOQUE",
+      baixaHint: s.baixaMode === "entrada"
+        ? "Cole (Ctrl+V) as colunas SKU e quantidade. As quantidades serão SOMADAS ao estoque atual. Nada é gravado até você aprovar."
+        : "Cole (Ctrl+V) as colunas SKU e quantidade copiadas do Excel/Google Sheets. As quantidades serão SUBTRAÍDAS do estoque. Nada é gravado até você aprovar.",
+      qtyColLabel: s.baixaMode === "entrada" ? "ENTRADA" : "BAIXA",
+      modeSaida: () => this.setState({ baixaMode: "saida", applyMsg: null }),
+      modeEntrada: () => this.setState({ baixaMode: "entrada", applyMsg: null }),
+      modeSaidaStyle,
+      modeEntradaStyle,
       baixaItems,
       hasBaixaItems: baixaAll.length > 0,
       baixaSummary: baixaAll.length + " SKU(s) colado(s) · " + negList.length + " negativo(s) · " + nfList.length + " não encontrado(s)",
