@@ -329,27 +329,37 @@ class Component extends DCLogic {
       alert("Para gravar na planilha, configure a SCRIPT_URL no topo do código.\n\nSiga o passo a passo do arquivo apps-script-instrucoes.md (publicar o Apps Script como Web App e colar a URL gerada).");
       return;
     }
-    const found = items.filter(i => i.found);
-    if (!found.length) { alert("Nenhum SKU válido para aplicar."); return; }
-    const negs = found.filter(i => i.neg);
-    if (negs.length) {
-      const msg = "ATENÇÃO: " + negs.length + " SKU(s) ficarão NEGATIVOS:\n\n" +
-        negs.map(n => n.cod + ": " + n.cur + " − " + n.qty + " = " + n.result).join("\n") +
-        "\n\nAplicar mesmo assim?";
-      if (!confirm(msg)) return;
+    // Aplica somente SKUs encontrados na planilha, com quantidade a subtrair
+    // e que NÃO fiquem negativos. Negativos e não encontrados são ignorados.
+    const apply = items.filter(i => i.found && i.qty > 0 && !i.neg);
+    const skippedNeg = items.filter(i => i.found && i.neg);
+    const skippedNf = items.filter(i => !i.found);
+    if (!apply.length) {
+      alert("Nenhum SKU válido para aplicar." +
+        (skippedNeg.length ? "\n\nFicariam negativos (ignorados): " + skippedNeg.map(x => x.cod).join(", ") : "") +
+        (skippedNf.length ? "\n\nNão encontrados: " + skippedNf.map(x => x.cod).join(", ") : ""));
+      return;
     }
+    const parts = [];
+    if (skippedNeg.length) parts.push(skippedNeg.length + " SKU(s) serão IGNORADOS por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
+    if (skippedNf.length) parts.push(skippedNf.length + " SKU(s) não encontrados serão ignorados: " + skippedNf.map(x => x.cod).join(", "));
+    const msg = "Aplicar baixa em " + apply.length + " SKU(s)?" + (parts.length ? "\n\n" + parts.join("\n\n") : "");
+    if (!confirm(msg)) return;
     this.setState({ applying: true, applyMsg: null });
     try {
       const res = await fetch(this.SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ changes: found.map(i => ({ cod: i.cod, subtract: i.qty, newTotal: i.result })) }),
+        body: JSON.stringify({ changes: apply.map(i => ({ cod: i.cod, subtract: i.qty, newTotal: i.result })) }),
       });
       const out = await res.json();
       if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida do Apps Script");
-      const n = out.updated ? out.updated.length : found.length;
-      const nf = out.notFound && out.notFound.length ? " · não encontrados na planilha: " + out.notFound.join(", ") : "";
-      this.setState({ applying: false, applyMsg: "✓ " + n + " SKU(s) atualizados na planilha." + nf, baixaText: "" });
+      const n = out.updated ? out.updated.length : apply.length;
+      const extra = [];
+      if (skippedNeg.length) extra.push(skippedNeg.length + " ignorado(s) por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
+      if (skippedNf.length) extra.push(skippedNf.length + " não encontrado(s): " + skippedNf.map(x => x.cod).join(", "));
+      if (out.notFound && out.notFound.length) extra.push("não localizados na planilha: " + out.notFound.join(", "));
+      this.setState({ applying: false, applyMsg: "✓ " + n + " SKU(s) atualizados na planilha." + (extra.length ? " · " + extra.join(" · ") : ""), baixaText: "" });
       this.load(true);
     } catch (e) {
       this.setState({ applying: false, applyMsg: "Erro ao gravar: " + (e && e.message ? e.message : e) });
