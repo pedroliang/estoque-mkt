@@ -110,6 +110,7 @@
           <div style="display:flex;gap:2px;background:#11151c;border:1px solid #2c3744;padding:3px;align-self:flex-start;">
             <button onClick="{{ modeSaida }}" style="{{ modeSaidaStyle }}">− Baixa (subtrair)</button>
             <button onClick="{{ modeEntrada }}" style="{{ modeEntradaStyle }}">+ Entrada (somar)</button>
+            <button onClick="{{ modeDefinir }}" style="{{ modeDefinirStyle }}">= Definir (valor final)</button>
           </div>
           <textarea value="{{ baixaText }}" onChange="{{ onBaixaText }}" spellcheck="false" placeholder="Cole aqui, ex.:&#10;A102&#9;10&#10;B205&#9;4" style="width:100%;min-height:110px;resize:vertical;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:12px 14px;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.6;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)"></textarea>
 
@@ -324,7 +325,9 @@ class Component extends DCLogic {
     return items.map(it => {
       const p = byCod.get(it.cod.toUpperCase());
       if (!p) return { ...it, found: false, desc: "", cur: null, result: null, neg: false };
-      const result = s.baixaMode === "entrada" ? p.totalNum + it.qty : p.totalNum - it.qty;
+      const result = s.baixaMode === "definir" ? it.qty
+        : s.baixaMode === "entrada" ? p.totalNum + it.qty
+        : p.totalNum - it.qty;
       return { ...it, found: true, desc: p.desc, cur: p.totalNum, result, neg: result < 0 };
     });
   }
@@ -336,7 +339,8 @@ class Component extends DCLogic {
     }
     // Aplica somente SKUs encontrados na planilha, com quantidade a subtrair
     // e que NÃO fiquem negativos. Negativos e não encontrados são ignorados.
-    const apply = items.filter(i => i.found && i.qty > 0 && !i.neg);
+    const isDefinir = this.state.baixaMode === "definir";
+    const apply = items.filter(i => i.found && (isDefinir ? i.qty >= 0 : i.qty > 0) && !i.neg);
     const skippedNeg = items.filter(i => i.found && i.neg);
     const skippedNf = items.filter(i => !i.found);
     if (!apply.length) {
@@ -348,7 +352,7 @@ class Component extends DCLogic {
     const parts = [];
     if (skippedNeg.length) parts.push(skippedNeg.length + " SKU(s) serão IGNORADOS por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
     if (skippedNf.length) parts.push(skippedNf.length + " SKU(s) não encontrados serão ignorados: " + skippedNf.map(x => x.cod).join(", "));
-    const acao = this.state.baixaMode === "entrada" ? "ENTRADA (+)" : "BAIXA (−)";
+    const acao = this.state.baixaMode === "definir" ? "DEFINIR (=)" : this.state.baixaMode === "entrada" ? "ENTRADA (+)" : "BAIXA (−)";
     const msg = "Aplicar " + acao + " em " + apply.length + " SKU(s)?" + (parts.length ? "\n\n" + parts.join("\n\n") : "");
     if (!confirm(msg)) return;
     this.setState({ applying: true, applyMsg: null });
@@ -571,8 +575,8 @@ class Component extends DCLogic {
       cod: b.cod,
       desc: b.found ? b.desc : "SKU não encontrado na planilha",
       curDisp: b.found ? fmt(b.cur) : "—",
-      qtyDisp: (s.baixaMode === "entrada" ? "+" : "−") + fmt(b.qty),
-      qtyStyle: "text-align:right;font-family:'IBM Plex Mono',monospace;color:" + (s.baixaMode === "entrada" ? "#35d49a" : "#f3a740") + ";",
+      qtyDisp: (s.baixaMode === "definir" ? "=" : s.baixaMode === "entrada" ? "+" : "−") + fmt(b.qty),
+      qtyStyle: "text-align:right;font-family:'IBM Plex Mono',monospace;color:" + (s.baixaMode === "definir" ? "#7fa5f5" : s.baixaMode === "entrada" ? "#35d49a" : "#f3a740") + ";",
       resDisp: b.found ? fmt(b.result) : "—",
       style: itemRowBase + (b.neg ? "background:rgba(239,93,93,.14);" : (!b.found ? "background:rgba(243,167,64,.10);" : "")),
       codStyle: "font-family:'IBM Plex Mono',monospace;font-weight:600;letter-spacing:.3px;color:" + ((b.neg || !b.found) ? "#ef5d5d" : "#9fc1ff") + ";",
@@ -585,11 +589,14 @@ class Component extends DCLogic {
       : baixaBtnBase + "background:#131a2b;color:#7fa5f5;border-color:#2a3d66;";
 
     const modeBase = "border:none;cursor:pointer;padding:8px 14px;font-size:12px;font-weight:600;letter-spacing:.3px;white-space:nowrap;";
-    const modeSaidaStyle = s.baixaMode !== "entrada"
+    const modeSaidaStyle = s.baixaMode === "saida"
       ? modeBase + "background:#5a2626;color:#ffb0b0;"
       : modeBase + "background:transparent;color:#8b97a6;";
     const modeEntradaStyle = s.baixaMode === "entrada"
       ? modeBase + "background:#1a5c3f;color:#c6f2dd;"
+      : modeBase + "background:transparent;color:#8b97a6;";
+    const modeDefinirStyle = s.baixaMode === "definir"
+      ? modeBase + "background:#1c3a6b;color:#bcd4ff;"
       : modeBase + "background:transparent;color:#8b97a6;";
 
     const approveBase = "display:flex;align-items:center;gap:7px;padding:10px 18px;font-size:12.5px;font-weight:600;letter-spacing:.4px;border:1px solid;";
@@ -604,15 +611,19 @@ class Component extends DCLogic {
       baixaOpen: s.baixaOpen,
       baixaText: s.baixaText,
       baixaBtnStyle,
-      baixaTitle: s.baixaMode === "entrada" ? "ENTRADA DE ESTOQUE" : "BAIXA DE ESTOQUE",
-      baixaHint: s.baixaMode === "entrada"
+      baixaTitle: s.baixaMode === "definir" ? "DEFINIR ESTOQUE (VALOR FINAL)" : s.baixaMode === "entrada" ? "ENTRADA DE ESTOQUE" : "BAIXA DE ESTOQUE",
+      baixaHint: s.baixaMode === "definir"
+        ? "Cole (Ctrl+V) as colunas SKU e quantidade. A quantidade colada VIRA o estoque final (substitui o atual). Nada é gravado até você aprovar."
+        : s.baixaMode === "entrada"
         ? "Cole (Ctrl+V) as colunas SKU e quantidade. As quantidades serão SOMADAS ao estoque atual. Nada é gravado até você aprovar."
         : "Cole (Ctrl+V) as colunas SKU e quantidade copiadas do Excel/Google Sheets. As quantidades serão SUBTRAÍDAS do estoque. Nada é gravado até você aprovar.",
-      qtyColLabel: s.baixaMode === "entrada" ? "ENTRADA" : "BAIXA",
+      qtyColLabel: s.baixaMode === "definir" ? "FINAL" : s.baixaMode === "entrada" ? "ENTRADA" : "BAIXA",
       modeSaida: () => this.setState({ baixaMode: "saida", applyMsg: null }),
       modeEntrada: () => this.setState({ baixaMode: "entrada", applyMsg: null }),
+      modeDefinir: () => this.setState({ baixaMode: "definir", applyMsg: null }),
       modeSaidaStyle,
       modeEntradaStyle,
+      modeDefinirStyle,
       baixaItems,
       hasBaixaItems: baixaAll.length > 0,
       baixaSummary: baixaAll.length + " SKU(s) colado(s) · " + negList.length + " negativo(s) · " + nfList.length + " não encontrado(s)",
