@@ -150,8 +150,29 @@
       </section>
     </sc-if>
 
-    <section style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
-      <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="4">
+    <section style="background:#0d1118;border:1px solid #222b37;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #1c232e;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:1.2px;color:#f2f6fb;">DIVISÃO DE ESTOQUE</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:#8b97a6;letter-spacing:.3px;">Upseller</span>
+          <input value="{{ pctValue }}" onChange="{{ onPct }}" type="number" min="0" max="100" style="width:62px;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:6px 8px;font-family:'IBM Plex Mono',monospace;font-size:13px;text-align:right;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#8b97a6;">%</span>
+          <span style="font-size:11px;color:#5f6b7a;letter-spacing:.3px;">· TF fica com {{ tfPct }}%</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);">
+        <sc-for list="{{ splitTiles }}" as="st" hint-placeholder-count="3">
+          <div style="{{ st.style }}">
+            <div style="font-size:10.5px;font-weight:600;letter-spacing:1.2px;color:#6b7889;text-transform:uppercase;">{{ st.label }}</div>
+            <div style="{{ st.numStyle }}">{{ st.value }}</div>
+            <div style="font-size:11px;color:#5f6b7a;margin-top:2px;">{{ st.sub }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+
+    <section style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;">
+      <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="3">
         <div style="background:#11151c;border:1px solid #222b37;border-left:3px solid #2c3744;padding:14px 16px;">
           <div style="font-size:10.5px;font-weight:600;letter-spacing:1.2px;color:#6b7889;text-transform:uppercase;">{{ t.label }}</div>
           <div style="{{ t.numStyle }}">{{ t.value }}</div>
@@ -162,13 +183,15 @@
 
     <section style="background:#0d1118;border:1px solid #222b37;">
       <div style="overflow-x:auto;">
-        <div style="min-width:960px;">
+        <div style="min-width:1100px;">
 
-          <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;">
+          <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 78px 66px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;">
             <div></div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;font-family:'IBM Plex Mono',monospace;">COD.</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">DESCRIÇÃO</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">TOTAL UN</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#8f7fd4;text-align:right;">UPSELLER</div>
+            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#3f9e77;text-align:right;">TF</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">P/ CX</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. FECH.</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. ABERTA</div>
@@ -178,11 +201,11 @@
           </div>
 
           <sc-for list="{{ skeleton }}" as="s" hint-placeholder-count="0">
-            <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;">
+            <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 78px 66px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;">
               <div></div>
               <div style="padding:14px 10px;"><div style="height:13px;width:48px;background:linear-gradient(90deg,#161b24,#1e2531,#161b24);background-size:340px 100%;animation:shimmer 1.3s infinite;"></div></div>
               <div style="padding:14px 10px;"><div style="height:13px;width:75%;background:linear-gradient(90deg,#161b24,#1e2531,#161b24);background-size:340px 100%;animation:shimmer 1.3s infinite;"></div></div>
-              <div style="padding:14px 10px;"></div><div></div><div></div><div></div><div></div><div></div><div></div>
+              <div style="padding:14px 10px;"></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
             </div>
           </sc-for>
 
@@ -192,6 +215,8 @@
               <div style="{{ p.codStyle }}">{{ p.cod }}</div>
               <div style="padding:13px 10px;font-size:13px;color:#dbe3ec;line-height:1.4;text-wrap:pretty;">{{ p.desc }}</div>
               <div style="{{ p.totalStyle }}">{{ p.totalDisp }}</div>
+              <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#c4b5fd;">{{ p.upDisp }}</div>
+              <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#7ce3b8;">{{ p.tfDisp }}</div>
               <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#8b97a6;">{{ p.porCx }}</div>
               <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#aeb9c6;">{{ p.cFechada }}</div>
               <div style="padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#aeb9c6;">{{ p.cAberta }}</div>
@@ -264,7 +289,31 @@ class Component extends DCLogic {
     baixaText: "",
     applying: false,
     applyMsg: null,
+    // % do estoque destinada ao canal Upseller (TF = 100 − esse valor).
+    // Fica salva no navegador (localStorage) e pode ser ajustada na tela.
+    upsellerPct: (() => {
+      try {
+        const v = parseInt(localStorage.getItem("estoqueMkt.upsellerPct"), 10);
+        if (!isNaN(v)) return Math.min(100, Math.max(0, v));
+      } catch (e) {}
+      return 70;
+    })(),
   };
+
+  setUpsellerPct(v) {
+    let n = parseInt(String(v == null ? "" : v).replace(/[^\d]/g, ""), 10);
+    if (isNaN(n)) n = 0;
+    n = Math.min(100, Math.max(0, n));
+    try { localStorage.setItem("estoqueMkt.upsellerPct", String(n)); } catch (e) {}
+    this.setState({ upsellerPct: n });
+  }
+
+  // Divide o total de um SKU entre os canais. Upseller arredonda; TF recebe o
+  // restante — a soma dos dois é SEMPRE igual ao total geral.
+  splitOf(totalNum, pct) {
+    const up = Math.round(totalNum * pct / 100);
+    return { up, tf: totalNum - up };
+  }
 
   SHEET = "1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ";
   GID = "961434769";
@@ -385,10 +434,13 @@ class Component extends DCLogic {
   exportExcel() {
     if (!window.XLSX) { alert("A biblioteca de Excel ainda está carregando. Tente novamente em alguns instantes."); return; }
     if (!this.state.raw.length) { alert("Não há dados para exportar."); return; }
+    const xPct = Math.min(100, Math.max(0, Number(this.state.upsellerPct) || 0));
     const rows = this.state.raw.map(p => ({
       "Código": p.cod,
       "Descrição": p.desc,
       "Total Un": p.totalNum,
+      ["Upseller (" + xPct + "%)"]: this.splitOf(p.totalNum, xPct).up,
+      ["TF (" + (100 - xPct) + "%)"]: this.splitOf(p.totalNum, xPct).tf,
       "Por Caixa": p.porCx,
       "Cx Fechada": p.cFechada,
       "Cx Aberta": p.cAberta,
@@ -397,7 +449,7 @@ class Component extends DCLogic {
       "Verificado": p.verified ? "Sim" : "Não",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [{ wch: 8 }, { wch: 46 }, { wch: 9 }, { wch: 10 }, { wch: 11 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 11 }];
+    ws["!cols"] = [{ wch: 8 }, { wch: 46 }, { wch: 9 }, { wch: 13 }, { wch: 10 }, { wch: 10 }, { wch: 11 }, { wch: 10 }, { wch: 16 }, { wch: 12 }, { wch: 11 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Estoque MKT");
     XLSX.writeFile(wb, "estoque-mkt-" + this.exportStamp() + ".xlsx");
@@ -408,17 +460,21 @@ class Component extends DCLogic {
     if (!J) { alert("A biblioteca de PDF ainda está carregando. Tente novamente em alguns instantes."); return; }
     if (!this.state.raw.length) { alert("Não há dados para exportar."); return; }
     const doc = new J({ orientation: "landscape", unit: "pt", format: "a4" });
-    const body = this.state.raw.map(p => [
-      p.cod, p.desc, String(p.totalNum), p.porCx, p.cFechada, p.cAberta,
-      p.locals.join(", ") || "—", p.atualizacao, p.verified ? "Sim" : "Não",
-    ]);
+    const pPct = Math.min(100, Math.max(0, Number(this.state.upsellerPct) || 0));
+    const body = this.state.raw.map(p => {
+      const sp = this.splitOf(p.totalNum, pPct);
+      return [
+        p.cod, p.desc, String(p.totalNum), String(sp.up), String(sp.tf), p.porCx, p.cFechada, p.cAberta,
+        p.locals.join(", ") || "—", p.atualizacao, p.verified ? "Sim" : "Não",
+      ];
+    });
     doc.setFontSize(14);
     doc.text("Estoque MKT — Almoxarifado · Marketing", 40, 36);
     doc.setFontSize(9);
     doc.setTextColor(120);
     doc.text("Gerado em " + new Date().toLocaleString("pt-BR") + "  ·  " + body.length + " itens", 40, 52);
     doc.autoTable({
-      head: [["Código", "Descrição", "Total Un", "Por Cx", "Cx Fech.", "Cx Aberta", "Localização", "Atualização", "Ver."]],
+      head: [["Código", "Descrição", "Total Un", "Upseller", "TF", "Por Cx", "Cx Fech.", "Cx Aberta", "Localização", "Atualização", "Ver."]],
       body,
       startY: 64,
       styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
@@ -490,6 +546,8 @@ class Component extends DCLogic {
     const s = this.state;
     const thr = Number(s.threshold) || 0;
     const q = s.query.trim().toLowerCase();
+    const pct = Math.min(100, Math.max(0, Number(s.upsellerPct) || 0));
+    const fmt2 = n => n.toLocaleString("pt-BR");
 
     const codeCounts = {};
     s.raw.forEach(p => { if (p.cod && p.cod !== "—") codeCounts[p.cod] = (codeCounts[p.cod] || 0) + 1; });
@@ -511,7 +569,7 @@ class Component extends DCLogic {
     }
     if (s.onlyLow) list = list.filter(p => p.low);
 
-    const rowBase = "display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;transition:background .12s;";
+    const rowBase = "display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 78px 66px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;transition:background .12s;";
     const rows = list.map(p => {
       const totalBase = "padding:13px 10px;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;letter-spacing:.3px;";
       const sim = simMap.get((p.cod || "").toUpperCase());
@@ -522,8 +580,12 @@ class Component extends DCLogic {
         : p.low ? "background:rgba(243,167,64,.05);" : "";
       const barColor = simNeg ? "#ef5d5d" : sim ? "#2f6df0" : p.dup ? "#ef5d5d" : p.low ? "#f3a740" : "transparent";
       const totalColor = simNeg ? "#ef5d5d" : sim ? "#9fc1ff" : p.low ? "#f3a740" : "#eef3f8";
+      // Divisão por canal — derivada do total (ou do total simulado, se houver ajuste em análise)
+      const split = this.splitOf(sim ? sim.result : p.totalNum, pct);
       return {
         ...p,
+        upDisp: fmt2(split.up),
+        tfDisp: fmt2(split.tf),
         totalDisp: sim ? p.totalNum.toLocaleString("pt-BR") + " → " + sim.result.toLocaleString("pt-BR") : p.totalDisp,
         rowStyle: rowBase + rowBg,
         barStyle: "align-self:stretch;background:" + barColor + ";",
@@ -542,9 +604,19 @@ class Component extends DCLogic {
     const numBase = "font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;letter-spacing:-.5px;margin-top:6px;line-height:1;";
     const fmt = n => n.toLocaleString("pt-BR");
 
+    // Totais por canal: soma dos valores já arredondados por SKU, para bater
+    // exatamente com a soma das colunas da tabela. Geral = Upseller + TF sempre.
+    const totalUp = s.raw.reduce((a, p) => a + this.splitOf(p.totalNum, pct).up, 0);
+    const totalTf = totalUn - totalUp;
+    const splitCell = "padding:16px;border-left:3px solid ";
+    const splitTiles = [
+      { label: "Geral", value: fmt(totalUn), sub: "100% · soma do total un.", numStyle: numBase + "color:#eef3f8;", style: splitCell + "#2c3744;" },
+      { label: "Upseller", value: fmt(totalUp), sub: pct + "% do estoque", numStyle: numBase + "color:#c4b5fd;", style: splitCell + "#7c5cf0;border-right:1px solid #161b24;" },
+      { label: "TF", value: fmt(totalTf), sub: (100 - pct) + "% do estoque", numStyle: numBase + "color:#7ce3b8;", style: splitCell + "#2f9166;" },
+    ];
+
     const tiles = [
       { label: "Itens cadastrados", value: fmt(totalItens), sub: "produtos na aba", numStyle: numBase + "color:#eef3f8;" },
-      { label: "Unidades em estoque", value: fmt(totalUn), sub: "soma do total un.", numStyle: numBase + "color:#9fc1ff;" },
       { label: "Estoque baixo", value: fmt(lowCount), sub: "abaixo de " + thr + " un.", numStyle: numBase + (lowCount > 0 ? "color:#f3a740;" : "color:#5f6b7a;") },
       { label: "Localizações", value: fmt(locSet.size), sub: "endereços distintos", numStyle: numBase + "color:#eef3f8;" },
     ];
@@ -648,6 +720,10 @@ class Component extends DCLogic {
         this.fieldButton("local", "Local"),
       ],
       lowToggleStyle,
+      splitTiles,
+      pctValue: String(pct),
+      tfPct: 100 - pct,
+      onPct: e => this.setUpsellerPct(e.target.value),
       tiles,
       rows,
       skeleton: s.loading ? [1, 2, 3, 4, 5, 6, 7, 8] : [],
