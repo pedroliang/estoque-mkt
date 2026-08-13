@@ -290,7 +290,8 @@ class Component extends DCLogic {
     applying: false,
     applyMsg: null,
     // % do estoque destinada ao canal Upseller (TF = 100 − esse valor).
-    // Fica salva no navegador (localStorage) e pode ser ajustada na tela.
+    // Valor global: gravado no Apps Script (vale para todos) e lido a cada
+    // atualização. O localStorage serve só de cache enquanto carrega.
     upsellerPct: (() => {
       try {
         const v = parseInt(localStorage.getItem("estoqueMkt.upsellerPct"), 10);
@@ -306,6 +307,38 @@ class Component extends DCLogic {
     n = Math.min(100, Math.max(0, n));
     try { localStorage.setItem("estoqueMkt.upsellerPct", String(n)); } catch (e) {}
     this.setState({ upsellerPct: n });
+    // Grava o valor global (para todos) com debounce de 800ms.
+    this._pctEditedAt = Date.now();
+    clearTimeout(this._pctTimer);
+    this._pctTimer = setTimeout(() => this.savePctRemote(n), 800);
+  }
+
+  async savePctRemote(n) {
+    if (!this.SCRIPT_URL) return;
+    try {
+      await fetch(this.SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "setPct", pct: n }),
+      });
+    } catch (e) { /* silencioso: o valor local continua valendo */ }
+  }
+
+  async loadPctRemote() {
+    if (!this.SCRIPT_URL) return;
+    try {
+      const res = await fetch(this.SCRIPT_URL + "?action=getPct&_=" + Date.now());
+      const out = await res.json();
+      if (!out || !out.ok || out.pct == null) return;
+      const n = Math.min(100, Math.max(0, parseInt(out.pct, 10)));
+      if (isNaN(n)) return;
+      // Não sobrescreve enquanto o usuário está editando o campo.
+      if (Date.now() - (this._pctEditedAt || 0) < 5000) return;
+      if (n !== this.state.upsellerPct) {
+        try { localStorage.setItem("estoqueMkt.upsellerPct", String(n)); } catch (e) {}
+        this.setState({ upsellerPct: n });
+      }
+    } catch (e) { /* silencioso */ }
   }
 
   // Divide o total de um SKU entre os canais. Upseller arredonda; TF recebe o
@@ -323,12 +356,14 @@ class Component extends DCLogic {
 
   componentDidMount() {
     this.load();
-    this._poll = setInterval(() => this.load(true), 60000);
+    this.loadPctRemote();
+    this._poll = setInterval(() => { this.load(true); this.loadPctRemote(); }, 60000);
     this._tick = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
   }
   componentWillUnmount() {
     clearInterval(this._poll);
     clearInterval(this._tick);
+    clearTimeout(this._pctTimer);
   }
 
   cell(c) {

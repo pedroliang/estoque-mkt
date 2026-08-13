@@ -36,10 +36,37 @@ carimbar a data na coluna **ATUALIZAÇÃO**.
 ```javascript
 // Aba do estoque (mesmo gid usado no site)
 const GID = 961434769;
+const PCT_KEY = "upsellerPct";
+
+function json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// GET ?action=getPct → devolve a % Upseller global
+function doGet(e) {
+  const action = e && e.parameter && e.parameter.action;
+  if (action === "getPct") {
+    const v = PropertiesService.getScriptProperties().getProperty(PCT_KEY);
+    return json({ ok: true, pct: v == null ? null : Number(v) });
+  }
+  return json({ ok: false, error: "ação desconhecida" });
+}
 
 function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
+
+    // { action: "setPct", pct: 40 } → grava a % Upseller global
+    if (data.action === "setPct") {
+      let n = parseInt(data.pct, 10);
+      if (isNaN(n)) throw new Error("pct inválido");
+      n = Math.min(100, Math.max(0, n));
+      PropertiesService.getScriptProperties().setProperty(PCT_KEY, String(n));
+      return json({ ok: true, pct: n });
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheets().find(s => s.getSheetId() === GID);
     if (!sheet) throw new Error("Aba com gid " + GID + " não encontrada");
@@ -78,6 +105,14 @@ function doPost(e) {
   }
 }
 ```
+
+## % Upseller global
+
+O script também guarda a **% Upseller** (divisão Upseller/TF) de forma global:
+quando alguém muda a % no site, ela é gravada aqui e todos os navegadores passam
+a usar o mesmo valor (o site relê a cada atualização automática, ~60s).
+Para ativar, cole o código atualizado acima e faça **Implantar → Gerenciar
+implantações → editar (lápis) → Nova versão → Implantar**. A URL não muda.
 
 ## Avisos
 
