@@ -503,17 +503,39 @@ class Component extends DCLogic {
     doc.save("estoque-mkt-" + this.exportStamp() + ".pdf");
   }
 
+  // Converte o CSV exportado da planilha em matriz de strings.
+  // Trata aspas, vírgulas dentro do texto e quebras de linha dentro da célula.
+  parseCsv(text) {
+    const rows = [];
+    let row = [], val = "", inQuotes = false;
+    const s = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    for (let i = 0; i < s.length; i++) {
+      const ch = s[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (s[i + 1] === '"') { val += '"'; i++; }
+          else inQuotes = false;
+        } else val += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === ",") { row.push(val); val = ""; }
+      else if (ch === "\n") { row.push(val); rows.push(row); row = []; val = ""; }
+      else val += ch;
+    }
+    if (val !== "" || row.length) { row.push(val); rows.push(row); }
+    return rows;
+  }
+
   async load(isAuto) {
     this.setState({ refreshing: true });
     try {
+      // Exportação CSV: preserva o código exatamente como está na planilha,
+      // inclusive SKUs com texto (ex.: "5742(P)"). A API gviz tratava a coluna
+      // A como numérica e devolvia vazio nesses casos.
       const url = "https://docs.google.com/spreadsheets/d/" + this.SHEET +
-        "/gviz/tq?tqx=out:json&gid=" + this.GID + "&headers=0&_=" + Date.now();
-      const res = await fetch(url);
+        "/export?format=csv&gid=" + this.GID + "&_=" + Date.now();
+      const res = await fetch(url, { cache: "no-store" });
       const text = await res.text();
-      const start = text.indexOf("{");
-      const end = text.lastIndexOf("}");
-      const json = JSON.parse(text.substring(start, end + 1));
-      const grid = (json.table.rows || []).map(r => (r.c || []).map(c => this.cell(c)));
+      const grid = this.parseCsv(text);
 
       // % Upseller global: célula K1 da aba (linha 1, coluna K). Quem mudar
       // lá muda para todos — o site relê a cada atualização (~60s).
