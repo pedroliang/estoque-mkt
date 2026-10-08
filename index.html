@@ -95,7 +95,54 @@
       <button onClick="{{ toggleBaixa }}" title="Dar baixa no estoque colando SKU e quantidade" style="{{ baixaBtnStyle }}">
         <span style="font-size:13px;">⇅</span> Ajuste
       </button>
+      <button onClick="{{ toggleBk }}" title="Backups: restaurar o estoque para um momento anterior" style="{{ bkBtnStyle }}">
+        <span style="font-size:13px;">⟲</span> Backups
+      </button>
     </section>
+
+    <sc-if value="{{ bkOpen }}" hint-placeholder-val="{{ false }}">
+      <section style="background:#0d1118;border:1px solid #2c3744;border-left:3px solid #b98a2f;margin-bottom:18px;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px 18px;border-bottom:1px solid #1c232e;">
+          <div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:1.2px;color:#f2f6fb;">BACKUPS DO ESTOQUE</div>
+            <div style="font-size:11.5px;color:#6b7889;margin-top:3px;line-height:1.5;">Um backup é criado automaticamente ANTES de cada ajuste. "Desfazer ajuste" volta só os SKUs daquele ajuste · "Restaurar tudo" volta a aba inteira (TOTAL UN e ATUALIZAÇÃO) para aquele momento. Antes de restaurar, o estado atual também é salvo.</div>
+          </div>
+          <button onClick="{{ toggleBk }}" style="background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:26px;height:26px;cursor:pointer;font-size:13px;line-height:1;flex:none;" style-hover="color:#fff;border-color:#3a4757;">✕</button>
+        </div>
+        <div style="padding:14px 18px;display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button onClick="{{ backupNow }}" style="background:#2a2414;color:#e8c27a;border:1px solid #6b5426;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.3px;" style-hover="border-color:#8a6c31;color:#ffd892;">＋ Criar backup agora</button>
+            <button onClick="{{ reloadBk }}" style="background:#161b24;color:#8b97a6;border:1px solid #2c3744;padding:9px 14px;font-size:12px;cursor:pointer;" style-hover="color:#fff;border-color:#3a4757;">⟳ Atualizar lista</button>
+            <input value="{{ bkFilter }}" onChange="{{ onBkFilter }}" placeholder="Filtrar por data (ex.: 07/10)" style="background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;width:200px;" style-focus="border-color:#b98a2f" />
+            <sc-if value="{{ bkMsgShow }}" hint-placeholder-val="{{ false }}">
+              <span style="{{ bkMsgStyle }}">{{ bkMsg }}</span>
+            </sc-if>
+          </div>
+          <div style="border:1px solid #1c232e;max-height:420px;overflow-y:auto;">
+            <div style="display:grid;grid-template-columns:150px 90px minmax(200px,1fr) 60px 270px;gap:8px;padding:9px 12px;background:#12161e;border-bottom:1px solid #222b37;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;position:sticky;top:0;">
+              <div>DATA/HORA</div><div>TIPO</div><div>DESCRIÇÃO</div><div style="text-align:right;">SKUS</div><div style="text-align:right;">AÇÃO</div>
+            </div>
+            <sc-for list="{{ bkRows }}" as="k" hint-placeholder-count="0">
+              <div style="display:grid;grid-template-columns:150px 90px minmax(200px,1fr) 60px 270px;gap:8px;align-items:center;padding:8px 12px;border-bottom:1px solid #161b24;font-size:12.5px;">
+                <div style="font-family:'IBM Plex Mono',monospace;color:#cdd6e1;">{{ k.at }}</div>
+                <div style="{{ k.tipoStyle }}">{{ k.tipo }}</div>
+                <div style="color:#aeb9c6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ k.desc }}">{{ k.desc }}</div>
+                <div style="text-align:right;font-family:'IBM Plex Mono',monospace;color:#8b97a6;">{{ k.itens }}</div>
+                <div style="display:flex;justify-content:flex-end;gap:6px;">
+                  <sc-if value="{{ k.hasLote }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ k.undo }}" style="background:#131a2b;color:#7fa5f5;border:1px solid #2a3d66;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;" style-hover="border-color:#4d82ff;color:#bcd4ff;">↶ Desfazer ajuste</button>
+                  </sc-if>
+                  <button onClick="{{ k.restore }}" style="background:#2a1818;color:#ef9a86;border:1px solid #5a2e26;padding:6px 10px;font-size:11.5px;font-weight:600;cursor:pointer;" style-hover="border-color:#7a3d32;color:#ffb3a1;">⟲ Restaurar tudo</button>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ bkEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:22px;text-align:center;font-size:12px;color:#6b7889;">{{ bkEmptyText }}</div>
+            </sc-if>
+          </div>
+        </div>
+      </section>
+    </sc-if>
 
     <sc-if value="{{ baixaOpen }}" hint-placeholder-val="{{ false }}">
       <section style="background:#0d1118;border:1px solid #2c3744;border-left:3px solid #2f6df0;margin-bottom:18px;">
@@ -141,9 +188,16 @@
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
               <button onClick="{{ approveBaixa }}" style="{{ approveStyle }}">✓ {{ approveLabel }}</button>
               <button onClick="{{ clearBaixa }}" style="background:#161b24;color:#8b97a6;border:1px solid #2c3744;padding:10px 16px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;" style-hover="color:#fff;border-color:#3a4757;">Limpar simulação</button>
-              <sc-if value="{{ applyMsgShow }}" hint-placeholder-val="{{ false }}">
-                <span style="{{ applyMsgStyle }}">{{ applyMsg }}</span>
-              </sc-if>
+            </div>
+          </sc-if>
+          <sc-if value="{{ applyAreaShow }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <sc-if value="{{ applyMsgShow }}" hint-placeholder-val="{{ false }}">
+                  <span style="{{ applyMsgStyle }}">{{ applyMsg }}</span>
+                </sc-if>
+                <sc-if value="{{ canUndoLast }}" hint-placeholder-val="{{ false }}">
+                  <button onClick="{{ undoLast }}" style="background:#131a2b;color:#7fa5f5;border:1px solid #2a3d66;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer;" style-hover="border-color:#4d82ff;color:#bcd4ff;">↶ Desfazer este ajuste</button>
+                </sc-if>
             </div>
           </sc-if>
         </div>
@@ -289,6 +343,13 @@ class Component extends DCLogic {
     baixaText: "",
     applying: false,
     applyMsg: null,
+    lastUndo: null,
+    bkOpen: false,
+    backups: [],
+    bkLoading: false,
+    bkBusy: false,
+    bkMsg: null,
+    bkFilter: "",
     // % do estoque destinada ao canal Upseller (TF = 100 − esse valor).
     // Valor global: lido da CÉLULA K1 da própria aba da planilha a cada
     // atualização (vale para todos). O localStorage é só cache do carregamento.
@@ -404,9 +465,9 @@ class Component extends DCLogic {
       alert("Para gravar na planilha, configure a SCRIPT_URL no topo do código.\n\nSiga o passo a passo do arquivo apps-script-instrucoes.md (publicar o Apps Script como Web App e colar a URL gerada).");
       return;
     }
-    // Aplica somente SKUs encontrados na planilha, com quantidade a subtrair
-    // e que NÃO fiquem negativos. Negativos e não encontrados são ignorados.
-    const isDefinir = this.state.baixaMode === "definir";
+    if (this.state.applying) return;
+    const mode = this.state.baixaMode;
+    const isDefinir = mode === "definir";
     const apply = items.filter(i => i.found && (isDefinir ? i.qty >= 0 : i.qty > 0) && !i.neg);
     const skippedNeg = items.filter(i => i.found && i.neg);
     const skippedNf = items.filter(i => !i.found);
@@ -419,28 +480,165 @@ class Component extends DCLogic {
     const parts = [];
     if (skippedNeg.length) parts.push(skippedNeg.length + " SKU(s) serão IGNORADOS por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
     if (skippedNf.length) parts.push(skippedNf.length + " SKU(s) não encontrados serão ignorados: " + skippedNf.map(x => x.cod).join(", "));
-    const acao = this.state.baixaMode === "definir" ? "DEFINIR (=)" : this.state.baixaMode === "entrada" ? "ENTRADA (+)" : "BAIXA (−)";
-    const msg = "Aplicar " + acao + " em " + apply.length + " SKU(s)?" + (parts.length ? "\n\n" + parts.join("\n\n") : "");
+    const acao = isDefinir ? "DEFINIR (=)" : mode === "entrada" ? "ENTRADA (+)" : "BAIXA (−)";
+    // Mesmo texto + mesmo modo de uma tentativa que falhou → reaproveita o MESMO
+    // lote: o Apps Script reconhece e NUNCA aplica duas vezes.
+    const sig = mode + "|" + this.state.baixaText;
+    const retrying = this._pending && this._pending.sig === sig;
+    const msg = (retrying ? "Reenviando o MESMO lote da tentativa anterior (se já foi gravado, não grava de novo).\n\n" : "") +
+      "Aplicar " + acao + " em " + apply.length + " SKU(s)?\n\nUm backup da aba é criado antes, automaticamente." +
+      (parts.length ? "\n\n" + parts.join("\n\n") : "");
     if (!confirm(msg)) return;
-    this.setState({ applying: true, applyMsg: null });
+    if (!retrying) this._pending = { sig, batchId: "L" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7) };
+    const batchId = this._pending.batchId;
+    this.setState({ applying: true, applyMsg: "Gravando na planilha…", lastUndo: null });
     try {
-      const res = await fetch(this.SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ changes: apply.map(i => ({ cod: i.cod, subtract: i.qty, newTotal: i.result })) }),
+      const out = await this.sendBatch({
+        action: "apply",
+        batchId,
+        mode,
+        // envia a QUANTIDADE (não o total calculado aqui): o Apps Script calcula
+        // em cima do valor atual da planilha, dentro de um lock.
+        items: apply.map(i => ({ cod: i.cod, qty: i.qty })),
       });
-      const out = await res.json();
-      if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida do Apps Script");
-      const n = out.updated ? out.updated.length : apply.length;
+      this._pending = null;
+      const n = (out.updated || []).length;
       const extra = [];
-      if (skippedNeg.length) extra.push(skippedNeg.length + " ignorado(s) por saldo insuficiente: " + skippedNeg.map(x => x.cod).join(", "));
-      if (skippedNf.length) extra.push(skippedNf.length + " não encontrado(s): " + skippedNf.map(x => x.cod).join(", "));
-      if (out.notFound && out.notFound.length) extra.push("não localizados na planilha: " + out.notFound.join(", "));
-      this.setState({ applying: false, applyMsg: "✓ " + n + " SKU(s) atualizados na planilha." + (extra.length ? " · " + extra.join(" · ") : ""), baixaText: "" });
+      if (out.duplicate) extra.push("este lote já tinha sido gravado — não foi aplicado de novo");
+      const neg = (out.skipped || []).map(x => x.cod).concat(skippedNeg.map(x => x.cod));
+      if (neg.length) extra.push(neg.length + " ignorado(s) por saldo insuficiente: " + neg.join(", "));
+      const nf = (out.notFound || []).concat(skippedNf.map(x => x.cod));
+      if (nf.length) extra.push(nf.length + " não encontrado(s): " + nf.join(", "));
+      const bad = out.mismatch || [];
+      const head = bad.length
+        ? "⚠ " + n + " SKU(s) enviados, mas " + bad.length + " não conferiram na planilha: " + bad.join(", ") + ". Use \"Desfazer este ajuste\" ou confira."
+        : "✓ " + n + " SKU(s) atualizados na planilha (backup salvo).";
+      this.setState({
+        applying: false,
+        applyMsg: head + (extra.length ? " · " + extra.join(" · ") : ""),
+        baixaText: "",
+        lastUndo: out.backupId ? { id: out.backupId } : null,
+      });
       this.load(true);
+      if (this.state.bkOpen) this.loadBackups();
     } catch (e) {
-      this.setState({ applying: false, applyMsg: "Erro ao gravar: " + (e && e.message ? e.message : e) });
+      this.setState({ applying: false, applyMsg: "Erro ao gravar: " + (e && e.message ? e.message : e) + " — clique em Aprovar de novo SEM mudar a lista: o mesmo lote é reenviado e não duplica." });
+      this.load(true);
     }
+  }
+
+  // Envia um lote com segurança: POST → se a resposta falhar, pergunta ao
+  // script se o lote já foi gravado → tenta de novo (POST e depois GET).
+  async sendBatch(data) {
+    const body = JSON.stringify(data);
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const out = attempt <= 2 || body.length > 6000
+          ? await this.postScript(body)
+          : await this.getScript({ action: "post", payload: body });
+        if (out && out.ok && data.action === "apply" && !out.batchId) {
+          throw new Error("o Apps Script publicado é a versão antiga. Cole o apps-script.gs e publique uma Nova versão (veja apps-script-instrucoes.md).");
+        }
+        if (out && out.ok) return out;
+        lastErr = new Error((out && out.error) || "resposta inválida do Apps Script");
+      } catch (err) {
+        if (/versão antiga/.test(err.message)) throw err;
+        lastErr = err;
+      }
+      if (data.batchId) {
+        try {
+          const st = await this.getScript({ action: "status", batch: data.batchId });
+          if (st && st.ok && st.applied) return st;
+        } catch (e) {}
+      }
+      if (attempt < 4) await new Promise(r => setTimeout(r, 1500 * attempt));
+    }
+    throw lastErr || new Error("sem resposta do Apps Script");
+  }
+
+  async getScript(params) {
+    const qs = Object.keys(params).map(k => encodeURIComponent(k) + "=" + encodeURIComponent(params[k])).join("&");
+    const res = await fetch(this.SCRIPT_URL + "?" + qs + "&_=" + Date.now(), { cache: "no-store" });
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch (e) { throw new Error("o Google respondeu com uma página de erro (HTTP " + res.status + ")"); }
+  }
+
+  // POST ao Apps Script lendo a resposta como TEXTO: se vier HTML (página de
+  // erro do Google) extrai uma mensagem legível em vez de quebrar no JSON.
+  async postScript(body) {
+    const res = await fetch(this.SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body,
+    });
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      let msg = "";
+      try {
+        const doc = new DOMParser().parseFromString(text, "text/html");
+        doc.querySelectorAll("script,style").forEach(n => n.remove());
+        msg = (doc.body ? doc.body.textContent : "").replace(/\s+/g, " ").trim().slice(0, 200);
+        if (!msg && doc.title) msg = doc.title;
+      } catch (e2) {}
+      throw new Error("o Google respondeu com uma página de erro (HTTP " + res.status + ")" + (msg ? ": " + msg : ""));
+    }
+  }
+
+  // ---- backups ----
+  async loadBackups() {
+    if (!this.SCRIPT_URL) return;
+    this.setState({ bkLoading: true });
+    try {
+      const out = await this.getScript({ action: "listBackups" });
+      if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida");
+      this.setState({ backups: out.backups || [], bkLoading: false });
+    } catch (e) {
+      this.setState({ bkLoading: false, bkMsg: "Erro ao listar backups: " + (e && e.message ? e.message : e) + " (o Apps Script foi atualizado para a v2?)" });
+    }
+  }
+
+  async backupNow() {
+    if (this.state.bkBusy) return;
+    this.setState({ bkBusy: true, bkMsg: "Criando backup…" });
+    try {
+      const out = await this.postScript(JSON.stringify({ action: "backup", note: "Backup manual" }));
+      if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida");
+      this.setState({ bkBusy: false, bkMsg: "✓ Backup criado: " + out.backup.at });
+      this.loadBackups();
+    } catch (e) {
+      this.setState({ bkBusy: false, bkMsg: "Erro ao criar backup: " + (e && e.message ? e.message : e) });
+    }
+  }
+
+  async restoreBackup(bk, scope) {
+    if (this.state.bkBusy || this.state.applying) return;
+    const txt = scope === "lote"
+      ? "DESFAZER o ajuste de " + bk.at + "?\n\nOs SKUs alterados naquele ajuste voltam ao valor que tinham ANTES dele.\n(Se esses SKUs mudaram depois, essas mudanças posteriores também serão perdidas.)"
+      : "RESTAURAR TUDO para " + bk.at + "?\n\nA coluna TOTAL UN (e ATUALIZAÇÃO) de TODOS os SKUs volta para como estava nesse momento. Tudo que mudou depois disso será desfeito.";
+    if (!confirm(txt + "\n\nO estado atual será salvo num backup antes, então dá para voltar.")) return;
+    this.setState({ bkBusy: true, applying: true, bkMsg: "Restaurando…", applyMsg: null });
+    try {
+      const out = await this.postScript(JSON.stringify({ action: "restore", id: bk.id, scope }));
+      if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida");
+      const m = "✓ Restaurado (" + bk.at + "): " + out.totalChanged + " SKU(s) com TOTAL alterado." +
+        (out.missing && out.missing.length ? " · não estão mais na aba: " + out.missing.join(", ") : "");
+      this.setState({ bkBusy: false, applying: false, bkMsg: m, applyMsg: this.state.baixaOpen ? m : null, lastUndo: null });
+      this.load(true);
+      this.loadBackups();
+    } catch (e) {
+      this.setState({ bkBusy: false, applying: false, bkMsg: "Erro ao restaurar: " + (e && e.message ? e.message : e) + " — confira a lista de backups antes de tentar de novo." });
+      this.loadBackups();
+    }
+  }
+
+  async undoLast() {
+    const u = this.state.lastUndo;
+    if (!u) return;
+    await this.restoreBackup({ id: u.id, at: "agora há pouco" }, "lote");
   }
 
   exportStamp() {
@@ -731,9 +929,45 @@ class Component extends DCLogic {
       : approveBase + "background:#1a5c3f;color:#c6f2dd;border-color:#2f9166;cursor:pointer;";
 
     const applyOk = (s.applyMsg || "").indexOf("✓") === 0;
-    const applyMsgStyle = "font-size:12px;line-height:1.5;color:" + (applyOk ? "#35d49a" : "#ef5d5d") + ";";
+    const applyWarn = (s.applyMsg || "").indexOf("⚠") === 0 || s.applying;
+    const applyMsgStyle = "font-size:12px;line-height:1.5;color:" + (applyOk ? "#35d49a" : applyWarn ? "#f3a740" : "#ef5d5d") + ";";
+
+    // ---- painel de backups ----
+    const bkBtnStyle = s.bkOpen
+      ? baixaBtnBase + "background:#b98a2f;color:#1a1408;border-color:#d9a640;"
+      : baixaBtnBase + "background:#211c12;color:#e8c27a;border-color:#5a4720;";
+    const bkF = (s.bkFilter || "").trim().toLowerCase();
+    const tipoColor = { auto: "#7fa5f5", manual: "#e8c27a", diario: "#35d49a", restauracao: "#ef9a86" };
+    const tipoNome = { auto: "ajuste", manual: "manual", diario: "diário", restauracao: "restauração" };
+    const bkRows = (s.backups || [])
+      .filter(b => !bkF || (b.at + " " + b.desc + " " + b.tipo).toLowerCase().includes(bkF))
+      .map(b => ({
+        ...b,
+        tipo: tipoNome[b.tipo] || b.tipo,
+        tipoStyle: "font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:" + (tipoColor[b.tipo] || "#8b97a6") + ";",
+        hasLote: b.tipo === "auto" && !!b.lote,
+        undo: () => this.restoreBackup(b, "lote"),
+        restore: () => this.restoreBackup(b, "all"),
+      }));
+    const bkOk = (s.bkMsg || "").indexOf("✓") === 0;
 
     return {
+      bkOpen: s.bkOpen,
+      bkBtnStyle,
+      toggleBk: () => { const open = !this.state.bkOpen; this.setState({ bkOpen: open, bkMsg: null }); if (open) this.loadBackups(); },
+      backupNow: () => this.backupNow(),
+      reloadBk: () => { this.setState({ bkMsg: null }); this.loadBackups(); },
+      bkFilter: s.bkFilter,
+      onBkFilter: e => this.setState({ bkFilter: e.target.value }),
+      bkMsgShow: !!s.bkMsg,
+      bkMsg: s.bkMsg || "",
+      bkMsgStyle: "font-size:12px;line-height:1.5;color:" + (bkOk ? "#35d49a" : (s.bkBusy ? "#e8c27a" : "#ef5d5d")) + ";",
+      bkRows,
+      bkEmpty: bkRows.length === 0,
+      bkEmptyText: s.bkLoading ? "Carregando backups…" : (bkF ? "Nenhum backup para \"" + s.bkFilter.trim() + "\"" : "Nenhum backup ainda. Será criado automaticamente no próximo ajuste, ou clique em \"Criar backup agora\"."),
+      applyAreaShow: !!s.applyMsg || !!s.lastUndo,
+      canUndoLast: !!s.lastUndo && !s.applying,
+      undoLast: () => this.undoLast(),
       baixaOpen: s.baixaOpen,
       baixaText: s.baixaText,
       baixaBtnStyle,

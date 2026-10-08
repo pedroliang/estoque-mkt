@@ -1,126 +1,63 @@
-# Aprovar mudanças → gravar na planilha (Google Apps Script)
+# Apps Script do Estoque MKT (v2) — ajuste em massa seguro + backups
 
-O site é estático e só **lê** a planilha. Para o botão **"Aprovar mudanças"** gravar
-de volta, você publica um pequeno script dentro da própria planilha. **Não é preciso
-compartilhar login/senha com ninguém** — a autorização é feita por você, uma única
-vez, no seu navegador.
+O site é estático e só **lê** a planilha. Para gravar (Aprovar mudanças, Backups,
+% Upseller) ele chama um Apps Script publicado dentro da própria planilha.
 
-## Passo a passo (±3 minutos)
+O código completo está em **`apps-script.gs`** (neste repositório).
 
-1. Abra a planilha do estoque no Google Sheets (logado na sua conta).
-2. Menu **Extensões → Apps Script**.
-3. Apague o conteúdo do editor e cole o código da seção abaixo. Salve (Ctrl+S).
-4. Clique em **Implantar → Nova implantação**.
-5. Em "Selecionar tipo" (ícone de engrenagem), escolha **App da Web**.
-6. Configure:
-   - **Executar como:** Eu (sua conta)
-   - **Quem pode acessar:** Qualquer pessoa
-7. Clique em **Implantar**. O Google vai pedir autorização — aceite
-   (pode aparecer "app não verificado": clique em *Avançado → Acessar... (não seguro)*;
-   é o seu próprio script).
-8. Copie a **URL do app da Web** (termina em `/exec`).
-9. Abra `Estoque MKT.dc.html` e cole a URL na constante `SCRIPT_URL`:
+## Atualizar o script (fazer UMA vez)
 
-   ```js
-   SCRIPT_URL = "https://script.google.com/macros/s/SEU_ID_AQUI/exec";
-   ```
+1. Abra a planilha → **Extensões → Apps Script**.
+2. Apague SÓ o bloco do site (doGet, doPost, pctJson_, setPctSite, getPctSite, baixaEstoqueSite e as variáveis GID_SITE_BAIXA e PCT_KEY) e cole o conteúdo de `apps-script.gs` no lugar. Funções de outras abas ficam como estão. Salve (Ctrl+S).
+3. **Implantar → Gerenciar implantações → lápis (editar) → Versão: Nova versão → Implantar.**
+   (Assim a URL `/exec` continua a mesma e o site não precisa mudar.)
+4. Se o Google pedir autorização de novo, aceite
+   (*Avançado → Acessar ... (não seguro)* — é o seu próprio script).
 
-Pronto. O botão "Aprovar mudanças" passa a atualizar a coluna **TOTAL UN** e a
-carimbar a data na coluna **ATUALIZAÇÃO**.
+Teste: abra `SUA_URL/exec?action=ping` no navegador → deve mostrar `{"ok":true,"version":2}`.
 
-> Se depois você alterar o código do script, é preciso fazer **Implantar →
-> Gerenciar implantações → editar → Nova versão** para a mudança valer na URL.
+## O que mudou na v2
 
-## Código do Apps Script
+- **O cálculo é feito no script**, com o valor ATUAL da planilha e dentro de um
+  bloqueio (lock). O site manda só "SKU + quantidade + modo"; não usa mais o
+  número que estava carregado na tela (que podia estar desatualizado).
+- **Cada ajuste tem um número de lote.** Se a resposta do Google falhar, o site
+  pergunta ao script se o lote já foi gravado e, se precisar, reenvia o MESMO lote —
+  o script **nunca aplica o mesmo lote duas vezes**. Antes, um erro no meio
+  (ex.: "acao desconhecida") fazia a pessoa aprovar de novo e alguns SKUs
+  levavam baixa em dobro.
+- Depois de gravar, o script **confere** os valores na planilha e avisa se algum
+  não bateu.
+- **Backup automático antes de cada ajuste** (TOTAL UN + ATUALIZAÇÃO de todos os SKUs).
 
-```javascript
-// Aba do estoque (mesmo gid usado no site)
-const GID = 961434769;
-const PCT_KEY = "upsellerPct";
+## Abas criadas automaticamente
 
-function json(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+- **`_BACKUPS_MKT`** (oculta) — um backup por linha. Guarda os últimos 200.
+- **`_LOG_AJUSTES_MKT`** — histórico de cada SKU alterado: data/hora, lote, modo,
+  antes, quantidade, depois, status. Útil para auditoria.
 
-// GET ?action=getPct → devolve a % Upseller global
-function doGet(e) {
-  const action = e && e.parameter && e.parameter.action;
-  if (action === "getPct") {
-    const v = PropertiesService.getScriptProperties().getProperty(PCT_KEY);
-    return json({ ok: true, pct: v == null ? null : Number(v) });
-  }
-  return json({ ok: false, error: "ação desconhecida" });
-}
+Não apague nem edite essas abas manualmente.
 
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
+## Botão "Backups" no site
 
-    // { action: "setPct", pct: 40 } → grava a % Upseller global
-    if (data.action === "setPct") {
-      let n = parseInt(data.pct, 10);
-      if (isNaN(n)) throw new Error("pct inválido");
-      n = Math.min(100, Math.max(0, n));
-      PropertiesService.getScriptProperties().setProperty(PCT_KEY, String(n));
-      return json({ ok: true, pct: n });
-    }
+- **Desfazer ajuste** — volta só os SKUs daquele ajuste ao valor que tinham antes dele.
+- **Restaurar tudo** — volta a aba inteira (TOTAL UN e ATUALIZAÇÃO) para aquele momento
+  (data/hora). Use o filtro para achar uma data, ex.: `07/10`.
+- **Criar backup agora** — ponto de restauração manual (ex.: antes de uma contagem).
+- Toda restauração cria antes um backup do estado atual → dá para voltar atrás.
+- Logo após aprovar um ajuste aparece também o botão **"Desfazer este ajuste"**.
 
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheets().find(s => s.getSheetId() === GID);
-    if (!sheet) throw new Error("Aba com gid " + GID + " não encontrada");
+## (Opcional) Backup diário automático
 
-    const lock = LockService.getScriptLock();
-    lock.waitLock(10000);
-    try {
-      const values = sheet.getDataRange().getValues();
-      const updated = [], notFound = [];
+No Apps Script: ícone de relógio **Acionadores → Adicionar acionador** →
+função `backupDiarioMkt` → *Baseado no tempo* → *Contador de dias* → escolha o horário → Salvar.
+Assim existe um ponto de restauração por dia mesmo sem ajustes.
 
-      (data.changes || []).forEach(ch => {
-        const cod = String(ch.cod || "").trim().toUpperCase();
-        let found = false;
-        for (let i = 0; i < values.length; i++) {
-          if (String(values[i][0]).trim().toUpperCase() === cod) {
-            sheet.getRange(i + 1, 3).setValue(ch.newTotal); // coluna C = TOTAL UN
-            sheet.getRange(i + 1, 8).setValue(new Date());  // coluna H = ATUALIZAÇÃO
-            updated.push(ch.cod);
-            found = true;
-            break;
-          }
-        }
-        if (!found) notFound.push(ch.cod);
-      });
+## Observações
 
-      return ContentService
-        .createTextOutput(JSON.stringify({ ok: true, updated: updated, notFound: notFound }))
-        .setMimeType(ContentService.MimeType.JSON);
-    } finally {
-      lock.releaseLock();
-    }
-  } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: false, error: String(err) }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-```
-
-## % Upseller global
-
-O script também guarda a **% Upseller** (divisão Upseller/TF) de forma global:
-quando alguém muda a % no site, ela é gravada aqui e todos os navegadores passam
-a usar o mesmo valor (o site relê a cada atualização automática, ~60s).
-Para ativar, cole o código atualizado acima e faça **Implantar → Gerenciar
-implantações → editar (lápis) → Nova versão → Implantar**. A URL não muda.
-
-## Avisos
-
-- **Se a coluna TOTAL UN tiver fórmula** (ex.: caixas × unidades por caixa), o
-  script substitui a fórmula pelo número. Nesse caso me avise, que adapto para
-  atualizar as colunas de caixas em vez do total.
-- O script assume: coluna **A** = código (SKU), coluna **C** = TOTAL UN,
-  coluna **H** = ATUALIZAÇÃO — o mesmo layout que o site já lê.
+- Colunas usadas: **A** = código (SKU), **C** = TOTAL UN, **H** = ATUALIZAÇÃO,
+  **K1** = % Upseller. C. FECHADA / C. ABERTA continuam sendo fórmulas a partir de C.
 - "Quem pode acessar: Qualquer pessoa" significa que quem tiver a URL do script
-  consegue enviar atualizações. A URL é longa e não é pública, mas trate-a como
-  um segredo do time.
+  consegue enviar atualizações. Trate a URL como segredo do time.
+- O Google Sheets também tem **Arquivo → Histórico de versões**, que serve como
+  última linha de defesa.
