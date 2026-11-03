@@ -514,6 +514,15 @@ class Component extends DCLogic {
     return JSON.stringify({ action: "presence", token: this.token(), dev: this.deviceId(), tab: this.tabId, ...extra });
   }
 
+  // O Apps Script compara a senha exata. Para aceitar maiúsculas ou minúsculas,
+  // o site testa as formas de escrita usadas nas senhas: adm, Silvia, userFL.
+  passVariants(pass) {
+    const low = pass.toLowerCase();
+    const list = [pass, low, low.charAt(0).toUpperCase() + low.slice(1)];
+    if (low.indexOf("user") === 0) list.push("user" + low.slice(4).toUpperCase());
+    return [...new Set(list)];
+  }
+
   async submitLogin(e) {
     if (e && e.preventDefault) e.preventDefault();
     if (this.state.loginBusy) return;
@@ -521,7 +530,9 @@ class Component extends DCLogic {
     if (!user || !pass) { this.setState({ loginErr: "Preencha login e senha." }); return; }
     this.setState({ loginBusy: true, loginErr: null });
     try {
-      const out = await this.postScript(JSON.stringify({ action: "login", user, pass }));
+      const tries = await Promise.all(this.passVariants(pass).map(p =>
+        this.postScript(JSON.stringify({ action: "login", user, pass: p }))));
+      const out = tries.find(t => t && t.ok) || tries[0];
       if (out && out.ok) {
         const auth = { user: out.user, token: out.token };
         try { localStorage.setItem("estoqueMkt.auth", JSON.stringify(auth)); } catch (e2) {}
