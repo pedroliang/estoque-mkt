@@ -573,7 +573,7 @@ class Component extends DCLogic {
     const me = this.deviceId();
     const others = (s.sessions || []).filter(x => x.dev !== me);
     const all = s.auth ? [{ dev: me, user: s.auth.user, active: s.visible, me: true }, ...others] : [];
-    const colors = { user64: "#14b88a", adm: "#f0883e" };
+    const colors = { user64: "#14b88a", adm: "#f0883e", Silvia: "#ec6fa8", Givaldo: "#4d9df0", userFL: "#b48cf2", userDF: "#e3c54f" };
     const people = all.map(p => {
       const c = colors[p.user] || "#7c8cf0";
       const label = p.user + (p.me ? " (você)" : "");

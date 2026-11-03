@@ -24,7 +24,11 @@ var MKT_CHUNK = 40000;          // caracteres por célula (limite Google = 50.00
 // arquivo), execute essa função, copie o hash do log e cole aqui.
 var MKT_USERS = {
   user64: "6a20f69d631cbf241ca94c66c15c31886a4e41575630d42d03148dee094a5ac5",
-  adm: "b3993d5984f5f4b9745543e36ddef81d8b02d9e0c5266f51e3d250d5d7b83cea"
+  adm: "b3993d5984f5f4b9745543e36ddef81d8b02d9e0c5266f51e3d250d5d7b83cea",
+  Silvia: "99b220a978cb77c52940e97b7cd2fe4aeaf01b7a82b57fe90a94a5989f86d7cf",
+  Givaldo: "03c136766e7acc351a34ab94d8a6b44da81c3d61d85cd27eb837d3d0b89673d8",
+  userFL: "c386678ae65400b335a23841f2ffbd2fd43a9bea55a639e97acd4a49f6037d2e",
+  userDF: "8ad508659e8ed199412f58c124eb14cf1ed9513c3a4450c57d4345b955a83989"
 };
 var MKT_PRES_KEY = "mktPresence"; // chave do cache com as sessões abertas
 var MKT_PRES_TTL = 90000;         // ms sem sinal até a sessão sair da lista
@@ -103,8 +107,10 @@ function mktUserOf_(token) {
 }
 
 function mktLogin_(data) {
-  var user = mktKey_(data.user).toLowerCase();
-  if (!MKT_USERS.hasOwnProperty(user) || mktPassHash_(user, String(data.pass == null ? "" : data.pass)) !== MKT_USERS[user]) {
+  // o login aceita maiúsculas ou minúsculas; a senha precisa ser exata
+  var typed = mktKey_(data.user), user = null;
+  for (var u in MKT_USERS) if (u.toUpperCase() === typed) user = u;
+  if (!user || mktPassHash_(user, String(data.pass == null ? "" : data.pass)) !== MKT_USERS[user]) {
     return { ok: false, error: "Login ou senha incorretos" };
   }
   return { ok: true, user: user, token: mktToken_(user) };
