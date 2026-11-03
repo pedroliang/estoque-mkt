@@ -280,21 +280,27 @@
     </section>
 
     <section style="background:#0d1118;border:1px solid #222b37;">
+      <sc-if value="{{ colActive }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#101a2e;border-bottom:1px solid #223557;font-size:12px;color:#9fc1ff;">
+          <span>{{ colActiveText }}</span>
+          <button onClick="{{ clearCols }}" style="background:#161b24;color:#cdd6e1;border:1px solid #2c3744;padding:5px 11px;font-size:11.5px;font-weight:600;cursor:pointer;">Limpar filtros</button>
+        </div>
+      </sc-if>
       <div style="overflow-x:auto;">
         <div style="min-width:1100px;">
 
           <div style="display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 78px 66px 64px 78px 84px 130px 116px 58px;align-items:center;background:#12161e;border-bottom:1px solid #222b37;">
             <div></div>
-            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;font-family:'IBM Plex Mono',monospace;">COD.</div>
-            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">DESCRIÇÃO</div>
-            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">TOTAL UN</div>
+            <div style="padding:5px 4px;"><button onClick="{{ hCod.open }}" title="Filtrar e ordenar" style="{{ hCod.style }}">COD. <span style="{{ hCod.markStyle }}">{{ hCod.mark }}</span></button></div>
+            <div style="padding:5px 4px;"><button onClick="{{ hDesc.open }}" title="Filtrar e ordenar" style="{{ hDesc.style }}">DESCRIÇÃO <span style="{{ hDesc.markStyle }}">{{ hDesc.mark }}</span></button></div>
+            <div style="padding:5px 4px;text-align:right;"><button onClick="{{ hTotal.open }}" title="Filtrar e ordenar" style="{{ hTotal.style }}">TOTAL UN <span style="{{ hTotal.markStyle }}">{{ hTotal.mark }}</span></button></div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#8f7fd4;text-align:right;">UPSELLER</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#3f9e77;text-align:right;">TF</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">P/ CX</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. FECH.</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:right;">C. ABERTA</div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">LOCALIZAÇÃO</div>
-            <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;">ATUALIZAÇÃO</div>
+            <div style="padding:5px 4px;"><button onClick="{{ hDate.open }}" title="Filtrar e ordenar" style="{{ hDate.style }}">ATUALIZAÇÃO <span style="{{ hDate.markStyle }}">{{ hDate.mark }}</span></button></div>
             <div style="padding:11px 10px;font-size:10px;font-weight:600;letter-spacing:1px;color:#6b7889;text-align:center;">VER.</div>
           </div>
 
@@ -367,6 +373,51 @@
     </footer>
 
   </main>
+
+  <sc-if value="{{ popOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closePop }}" style="position:fixed;inset:0;z-index:50;"></div>
+    <div data-col-pop="1" style="{{ popStyle }}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span style="font-size:11px;font-weight:600;letter-spacing:1px;color:#cdd6e1;">{{ popTitle }}</span>
+        <button onClick="{{ closePop }}" title="Fechar" style="background:#1c232e;border:1px solid #2c3744;color:#8b97a6;width:24px;height:24px;cursor:pointer;font-size:12px;">✕</button>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button onClick="{{ sortAsc }}" style="{{ sortAscStyle }}">{{ sortAscLabel }}</button>
+        <button onClick="{{ sortDesc }}" style="{{ sortDescStyle }}">{{ sortDescLabel }}</button>
+      </div>
+      <sc-if value="{{ popIsText }}" hint-placeholder-val="{{ false }}">
+        <label style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#8b97a6;">
+          CONTÉM
+          <input value="{{ popTextVal }}" onChange="{{ onPopText }}" autoFocus="autofocus" placeholder="{{ popTextHint }}" style="width:100%;background:#0a0d12;border:1px solid #2c3744;color:#e3e9f0;padding:8px 9px;font-size:13px;outline:none;color-scheme:dark;">
+        </label>
+      </sc-if>
+      <sc-if value="{{ popIsNum }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#8b97a6;">
+            MÍNIMO
+            <input type="number" min="0" value="{{ popMin }}" onChange="{{ onPopMin }}" autoFocus="autofocus" style="width:100%;background:#0a0d12;border:1px solid #2c3744;color:#e3e9f0;padding:8px 9px;font-size:13px;outline:none;color-scheme:dark;">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#8b97a6;">
+            MÁXIMO
+            <input type="number" min="0" value="{{ popMax }}" onChange="{{ onPopMax }}" style="width:100%;background:#0a0d12;border:1px solid #2c3744;color:#e3e9f0;padding:8px 9px;font-size:13px;outline:none;color-scheme:dark;">
+          </label>
+        </div>
+      </sc-if>
+      <sc-if value="{{ popIsDate }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <label style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#8b97a6;">
+            DE
+            <input type="date" value="{{ popFrom }}" onChange="{{ onPopFrom }}" style="width:100%;background:#0a0d12;border:1px solid #2c3744;color:#e3e9f0;padding:8px 9px;font-size:13px;outline:none;color-scheme:dark;">
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;font-size:10.5px;font-weight:600;letter-spacing:.8px;color:#8b97a6;">
+            ATÉ
+            <input type="date" value="{{ popTo }}" onChange="{{ onPopTo }}" style="width:100%;background:#0a0d12;border:1px solid #2c3744;color:#e3e9f0;padding:8px 9px;font-size:13px;outline:none;color-scheme:dark;">
+          </label>
+        </div>
+      </sc-if>
+      <button onClick="{{ clearPop }}" style="background:transparent;color:#8b97a6;border:1px solid #2c3744;padding:7px;font-size:12px;cursor:pointer;">Limpar esta coluna</button>
+    </div>
+  </sc-if>
   </sc-if>
 </div>
 </x-dc>
@@ -377,6 +428,12 @@ class Component extends DCLogic {
     query: "",
     field: "todos",
     onlyLow: false,
+    // Filtros e ordenação por coluna (os cartões de totais continuam mostrando tudo).
+    colFilter: { cod: "", desc: "", min: "", max: "", from: "", to: "" },
+    colSort: null,
+    popCol: null,
+    popX: 0,
+    popY: 0,
     threshold: 50,
     loading: true,
     error: null,
@@ -469,6 +526,16 @@ class Component extends DCLogic {
     this._onPageHide = () => this.sendLeave();
     document.addEventListener("visibilitychange", this._onVisibility);
     window.addEventListener("pagehide", this._onPageHide);
+    this._onPopKey = e => { if (e.key === "Escape" && this.state.popCol) this.setState({ popCol: null }); };
+    // A janela do filtro fica presa ao cabeçalho: se a tela rolar, ela fecha.
+    this._onPopScroll = e => {
+      if (!this.state.popCol) return;
+      if (e.target && e.target.closest && e.target.closest("[data-col-pop]")) return;
+      this.setState({ popCol: null });
+    };
+    document.addEventListener("keydown", this._onPopKey);
+    window.addEventListener("scroll", this._onPopScroll, true);
+    window.addEventListener("resize", this._onPopScroll);
     if (this.state.auth) this.startApp();
   }
   componentWillUnmount() {
@@ -476,6 +543,9 @@ class Component extends DCLogic {
     clearTimeout(this._hideTimer);
     document.removeEventListener("visibilitychange", this._onVisibility);
     window.removeEventListener("pagehide", this._onPageHide);
+    document.removeEventListener("keydown", this._onPopKey);
+    window.removeEventListener("scroll", this._onPopScroll, true);
+    window.removeEventListener("resize", this._onPopScroll);
     clearTimeout(this._pctTimer);
   }
   startApp() {
@@ -552,7 +622,7 @@ class Component extends DCLogic {
     this.sendLeave();
     this.stopApp();
     try { localStorage.removeItem("estoqueMkt.auth"); } catch (e) {}
-    this.setState({ auth: null, raw: [], sessions: [], loading: true, baixaOpen: false, baixaText: "", bkOpen: false, backups: [], loginErr: msg || null });
+    this.setState({ auth: null, raw: [], sessions: [], loading: true, colFilter: { cod: "", desc: "", min: "", max: "", from: "", to: "" }, colSort: null, popCol: null, baixaOpen: false, baixaText: "", bkOpen: false, backups: [], loginErr: msg || null });
   }
 
   async heartbeat() {
@@ -957,6 +1027,8 @@ class Component extends DCLogic {
         products.push({
           cod: cod || "—",
           desc: desc || "(sem descrição)",
+          noDesc: !desc,
+          dateKey: this.dateKey(r[7]),
           totalDisp: (r[2] || "").trim() || "0",
           totalNum: this.toNum(r[2]),
           porCx: (r[3] || "").trim() || "—",
@@ -983,6 +1055,64 @@ class Component extends DCLogic {
         error: "Verifique se a planilha está compartilhada como \"qualquer pessoa com o link pode ver\". Detalhe técnico: " + (e && e.message ? e.message : e),
       });
     }
+  }
+
+  // "30/10/2026" vira "2026-10-30", que dá para comparar e ordenar como texto.
+  dateKey(v) {
+    const m = String(v || "").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    return m ? m[3] + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0") : "";
+  }
+
+  // Abre a janela da coluna logo abaixo do cabeçalho, sem sair da tela.
+  openCol(col, e) {
+    if (this.state.popCol === col) { this.setState({ popCol: null }); return; }
+    const box = e.currentTarget.getBoundingClientRect();
+    const w = 270;
+    const vw = document.documentElement.clientWidth;
+    const popX = Math.max(8, Math.min(box.left, vw - w - 8));
+    // Perto do fim da tela, sobe o suficiente para caber inteira.
+    const popY = Math.max(8, Math.min(box.bottom + 6, window.innerHeight - 340));
+    this.setState({ popCol: col, popX, popY });
+  }
+
+  setColFilter(patch) {
+    this.setState(st => ({ colFilter: { ...st.colFilter, ...patch } }));
+  }
+
+  toggleSort(key, dir) {
+    this.setState(st => ({
+      colSort: st.colSort && st.colSort.key === key && st.colSort.dir === dir ? null : { key, dir },
+    }));
+  }
+
+  colFiltered(col, f) {
+    if (col === "cod") return !!f.cod.trim();
+    if (col === "desc") return !!f.desc.trim();
+    if (col === "total") return f.min !== "" || f.max !== "";
+    return !!(f.from || f.to);
+  }
+
+  clearCol(col) {
+    const patch = col === "cod" ? { cod: "" } : col === "desc" ? { desc: "" }
+      : col === "total" ? { min: "", max: "" } : { from: "", to: "" };
+    this.setState(st => ({
+      colFilter: { ...st.colFilter, ...patch },
+      colSort: st.colSort && st.colSort.key === col ? null : st.colSort,
+    }));
+  }
+
+  colHead(col, right) {
+    const s = this.state;
+    const on = this.colFiltered(col, s.colFilter);
+    const sorted = s.colSort && s.colSort.key === col ? s.colSort.dir : null;
+    const hot = on || !!sorted || s.popCol === col;
+    return {
+      open: e => this.openCol(col, e),
+      mark: sorted === "asc" ? "↑" : sorted === "desc" ? "↓" : "▾",
+      markStyle: "font-size:11px;color:" + (hot ? "#9fc1ff" : "#46505e") + ";",
+      style: "width:100%;background:" + (on ? "#16233f" : "transparent") + ";border:1px solid " + (on ? "#2f6df0" : "transparent") +
+        ";color:" + (hot ? "#9fc1ff" : "#6b7889") + ";padding:5px 6px;font-size:10px;font-weight:600;letter-spacing:1px;font-family:inherit;cursor:pointer;white-space:nowrap;text-align:" + (right ? "right" : "left") + ";",
+    };
   }
 
   fieldButton(key, label) {
@@ -1020,6 +1150,29 @@ class Component extends DCLogic {
       });
     }
     if (s.onlyLow) list = list.filter(p => p.low);
+
+    // ---- filtros e ordenação por coluna ----
+    const cf = s.colFilter;
+    const fCod = cf.cod.trim().toLowerCase(), fDesc = cf.desc.trim().toLowerCase();
+    if (fCod) list = list.filter(p => p.cod.toLowerCase().includes(fCod));
+    if (fDesc) list = list.filter(p => p.desc.toLowerCase().includes(fDesc));
+    if (cf.min !== "") list = list.filter(p => p.totalNum >= Number(cf.min));
+    if (cf.max !== "") list = list.filter(p => p.totalNum <= Number(cf.max));
+    if (cf.from) list = list.filter(p => p.dateKey && p.dateKey >= cf.from);
+    if (cf.to) list = list.filter(p => p.dateKey && p.dateKey <= cf.to);
+    if (s.colSort) {
+      const { key, dir } = s.colSort, sign = dir === "asc" ? 1 : -1;
+      const text = (a, b) => a.localeCompare(b, "pt-BR", { numeric: true, sensitivity: "base" });
+      // Item sem descrição ou sem data fica sempre no fim, nos dois sentidos.
+      const blank = p => (key === "desc" && p.noDesc) || (key === "date" && !p.dateKey) || (key === "cod" && p.cod === "—");
+      list = [...list].sort((a, b) => {
+        const ba = blank(a), bb = blank(b);
+        if (ba !== bb) return ba ? 1 : -1;
+        if (key === "total") return sign * (a.totalNum - b.totalNum);
+        if (key === "date") return sign * a.dateKey.localeCompare(b.dateKey);
+        return sign * text(key === "cod" ? a.cod : a.desc, key === "cod" ? b.cod : b.desc);
+      });
+    }
 
     const rowBase = "display:grid;grid-template-columns:3px 86px minmax(240px,1fr) 86px 78px 66px 64px 78px 84px 130px 116px 58px;border-bottom:1px solid #161b24;transition:background .12s;";
     const rows = list.map(p => {
@@ -1086,6 +1239,34 @@ class Component extends DCLogic {
     const lowToggleStyle = s.onlyLow
       ? lowBase + "background:rgba(243,167,64,.12);color:#f3a740;border-color:#7a5a23;"
       : lowBase + "background:#11151c;color:#8b97a6;";
+
+    // ---- janela do filtro por coluna ----
+    const pc = s.popCol;
+    const popCfg = {
+      cod: { title: "CÓDIGO", asc: "Menor → maior", desc: "Maior → menor" },
+      desc: { title: "DESCRIÇÃO", asc: "A → Z", desc: "Z → A" },
+      total: { title: "TOTAL UN", asc: "Menor → maior", desc: "Maior → menor" },
+      date: { title: "ATUALIZAÇÃO", asc: "Mais antiga", desc: "Mais recente" },
+    }[pc] || { title: "", asc: "", desc: "" };
+    const sortBtn = dir => {
+      const on = s.colSort && s.colSort.key === pc && s.colSort.dir === dir;
+      return "flex:1;padding:8px 6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid " + (on ? "#2f6df0" : "#2c3744") +
+        ";background:" + (on ? "#2f6df0" : "#161b24") + ";color:" + (on ? "#fff" : "#cdd6e1") + ";";
+    };
+    const brDate = v => v.split("-").reverse().join("/");
+    const colParts = [];
+    if (fCod) colParts.push("Código contém \"" + cf.cod.trim() + "\"");
+    if (fDesc) colParts.push("Descrição contém \"" + cf.desc.trim() + "\"");
+    if (cf.min !== "") colParts.push("Total a partir de " + cf.min);
+    if (cf.max !== "") colParts.push("Total até " + cf.max);
+    if (cf.from) colParts.push("Atualização desde " + brDate(cf.from));
+    if (cf.to) colParts.push("Atualização até " + brDate(cf.to));
+    if (s.colSort) {
+      const c = { cod: "código", desc: "descrição", total: "total", date: "atualização" }[s.colSort.key];
+      colParts.push("Ordenado por " + c + (s.colSort.dir === "asc" ? " ↑" : " ↓"));
+    }
+    const colActive = colParts.length > 0;
+    const colActiveText = colParts.join(" · ");
 
     const resultText = s.loading
       ? "Carregando dados…"
@@ -1229,9 +1410,41 @@ class Component extends DCLogic {
       onPct: e => this.setUpsellerPct(e.target.value),
       tiles,
       rows,
+      hCod: this.colHead("cod"),
+      hDesc: this.colHead("desc"),
+      hTotal: this.colHead("total", true),
+      hDate: this.colHead("date"),
+      colActive,
+      colActiveText,
+      clearCols: () => this.setState({ colFilter: { cod: "", desc: "", min: "", max: "", from: "", to: "" }, colSort: null }),
+      popOpen: !!pc,
+      popStyle: "position:fixed;z-index:51;top:" + s.popY + "px;left:" + s.popX + "px;width:270px;max-height:calc(100vh - " + (s.popY + 12) + "px);overflow:auto;display:flex;flex-direction:column;gap:10px;padding:12px;background:#11151c;border:1px solid #2c3744;border-top:2px solid #2f6df0;box-shadow:0 12px 30px rgba(0,0,0,.55);",
+      popTitle: popCfg.title,
+      closePop: () => this.setState({ popCol: null }),
+      clearPop: () => this.clearCol(pc),
+      sortAsc: () => this.toggleSort(pc, "asc"),
+      sortDesc: () => this.toggleSort(pc, "desc"),
+      sortAscLabel: popCfg.asc,
+      sortDescLabel: popCfg.desc,
+      sortAscStyle: sortBtn("asc"),
+      sortDescStyle: sortBtn("desc"),
+      popIsText: pc === "cod" || pc === "desc",
+      popIsNum: pc === "total",
+      popIsDate: pc === "date",
+      popTextHint: pc === "cod" ? "Ex.: 64" : "Ex.: APOLLO",
+      popTextVal: pc === "cod" ? cf.cod : cf.desc,
+      onPopText: e => this.setColFilter(this.state.popCol === "cod" ? { cod: e.target.value } : { desc: e.target.value }),
+      popMin: cf.min,
+      popMax: cf.max,
+      onPopMin: e => this.setColFilter({ min: e.target.value }),
+      onPopMax: e => this.setColFilter({ max: e.target.value }),
+      popFrom: cf.from,
+      popTo: cf.to,
+      onPopFrom: e => this.setColFilter({ from: e.target.value }),
+      onPopTo: e => this.setColFilter({ to: e.target.value }),
       skeleton: s.loading ? [1, 2, 3, 4, 5, 6, 7, 8] : [],
       isEmpty: !s.loading && !s.error && list.length === 0,
-      emptySuffix: q ? " para \"" + s.query.trim() + "\"" : (s.onlyLow ? " com estoque baixo" : ""),
+      emptySuffix: q ? " para \"" + s.query.trim() + "\"" : (s.onlyLow ? " com estoque baixo" : (colActive ? " com esses filtros" : "")),
       hasError: !!s.error && !s.loading,
       errorMsg: s.error || "",
       resultText,
