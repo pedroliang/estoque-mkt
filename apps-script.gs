@@ -35,6 +35,7 @@ var MKT_PRES_TTL = 90000;         // ms sem sinal até a sessão sair da lista
 function doGet(e) {
   var p = (e && e.parameter) || {};
   try {
+    if (String(p.action || "").indexOf("sep_") === 0) return pctJson_(sepHandle_(p)); // CentraLux Separação
     if (p.action === "getPct") return getPctSite();
     if (p.action === "ping") return pctJson_({ ok: true, version: MKT_VERSION });
     if (p.action === "status") return pctJson_(mktBatchStatus_(p.batch));
@@ -52,6 +53,7 @@ function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) throw new Error("POST sem conteudo");
     var data = JSON.parse(e.postData.contents);
+    if (String(data.action || "").indexOf("sep_") === 0) return pctJson_(sepHandle_(data)); // CentraLux Separação
     return pctJson_(mktHandle_(data));
   } catch (err) {
     return pctJson_({ ok: false, error: mktErr_(err) });
@@ -422,6 +424,197 @@ function mktRestore_(id, soLote) {
 // Baseado no tempo → Contador de dias → escolha o horário.
 function backupDiarioMkt() {
   mktWithLock_(function () { return mktCreateBackup_("diario", "Backup automatico diario", "", null); });
+}
+
+// =====================================================================
+//  CENTRALUX SEPARAÇÃO — cole este bloco no FINAL do CONTAGEM.gs
+//  Não tem doGet/doPost próprios: usa 1 linha no doGet e 1 no doPost.
+// =====================================================================
+/**
+ *
+ *  - Aba "Estoque Sistema": A = Cód (SKU), B = Estoque, C = Descrição  (somente leitura)
+ *  - Aba "Log Separacao":   banco de dados dos pedidos em separação (1 linha por SKU)
+ *  - Aba "Historico Separacao": criada automaticamente — registra inclusões, edições e exclusões
+ */
+
+var SEP_SS_ID = '1fRqUo8vH4awjCwV12U0fhR2bdBSRGFUVMlU8PozUsoQ';
+var SEP_ABA_ESTOQUE = 'Estoque Sistema';
+var SEP_ABA_LOG = 'Log Separacao';
+var SEP_ABA_HIST = 'Historico Separacao';
+var SEP_TZ = 'America/Sao_Paulo';
+
+var SEP_LOG_HEADERS = ['ID', 'Pedido', 'Cliente', 'Vendedor', 'Data Entrada', 'SKU', 'Descrição', 'Qtd', 'Criado em', 'Atualizado em'];
+var SEP_HIST_HEADERS = ['Data/Hora', 'Ação', 'ID', 'Pedido', 'Cliente', 'Vendedor', 'Data Entrada', 'SKUs'];
+
+/* ---------------- Roteador (chamado pelo doGet/doPost do Código.gs) ---------------- */
+
+function sepHandle_(data) {
+  var a = String(data.action || '');
+  if (a === 'sep_list') return { ok: true, pedidos: sepGetPedidos_() };
+  if (a === 'sep_catalogo') return { ok: true, catalogo: sepGetCatalogo_() };
+  if (a === 'sep_all') return { ok: true, pedidos: sepGetPedidos_(), catalogo: sepGetCatalogo_() };
+  if (a === 'sep_save' || a === 'sep_delete') {
+    var lock = LockService.getScriptLock();
+    if (!lock.tryLock(30000)) throw new Error('Planilha ocupada. Tente de novo em alguns segundos.');
+    try {
+      if (a === 'sep_save') {
+        var id = sepSavePedido_(typeof data.pedido === 'string' ? JSON.parse(data.pedido) : data.pedido);
+        return { ok: true, id: id, pedidos: sepGetPedidos_() };
+      }
+      sepDeletePedido_(data.id);
+      return { ok: true, pedidos: sepGetPedidos_() };
+    } finally { lock.releaseLock(); }
+  }
+  throw new Error('acao desconhecida: ' + a);
+}
+
+/* ---------------- Abas ---------------- */
+
+function sepNorm_(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+}
+
+function sepSheet_(name, headers) {
+  var ss = SpreadsheetApp.openById(SEP_SS_ID);
+  var sh = ss.getSheets().find(s => sepNorm_(s.getName()) === sepNorm_(name));
+  if (!sh) {
+    if (!headers) throw new Error('Aba "' + name + '" não encontrada');
+    sh = ss.insertSheet(name);
+  }
+  if (headers) {
+    var first = sh.getRange(1, 1, 1, headers.length).getValues()[0];
+    if (first.join('') === '') {
+      sh.getRange(1, 1, 1, headers.length).setValues([headers])
+        .setFontWeight('bold').setBackground('#0f172a').setFontColor('#ffffff');
+      sh.setFrozenRows(1);
+      sh.getRange('A:Z').setNumberFormat('@'); // tudo como texto (SKU e datas não viram números)
+    }
+  }
+  return sh;
+}
+
+/* ---------------- Catálogo (Estoque Sistema) ---------------- */
+
+function sepGetCatalogo_() {
+  var sh = sepSheet_(SEP_ABA_ESTOQUE);
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var vals = sh.getRange(2, 1, last - 1, 3).getDisplayValues();
+  var seen = {};
+  var out = [];
+  vals.forEach(r => {
+    var sku = String(r[0]).trim();
+    if (!sku || seen[sku]) return;
+    seen[sku] = true;
+    var desc = String(r[2]).replace(/^"+|"+$/g, '').trim();
+    out.push([sku, desc, String(r[1]).trim()]); // [sku, descrição, estoque]
+  });
+  return out;
+}
+
+/* ---------------- Pedidos (Log Separacao) ---------------- */
+
+function sepGetPedidos_() {
+  var sh = sepSheet_(SEP_ABA_LOG, SEP_LOG_HEADERS);
+  var last = sh.getLastRow();
+  if (last < 2) return [];
+  var vals = sh.getRange(2, 1, last - 1, SEP_LOG_HEADERS.length).getDisplayValues();
+  var map = {};
+  var order = [];
+  vals.forEach(r => {
+    var id = String(r[0]).trim();
+    if (!id) return;
+    if (!map[id]) {
+      map[id] = {
+        id: id, pedido: r[1], cliente: r[2], vendedor: r[3],
+        dataEntrada: sepToIso_(r[4]), criadoEm: r[8], atualizadoEm: r[9], itens: []
+      };
+      order.push(id);
+    }
+    if (String(r[5]).trim()) map[id].itens.push({ sku: r[5], descricao: r[6], qtd: r[7] });
+  });
+  return order.map(id => map[id]);
+}
+
+function sepSavePedido_(p) {
+  if (!p) throw new Error('Pedido vazio');
+  if (!String(p.pedido || '').trim()) throw new Error('Informe o número do pedido');
+  var sh = sepSheet_(SEP_ABA_LOG, SEP_LOG_HEADERS);
+  var agora = Utilities.formatDate(new Date(), SEP_TZ, 'dd/MM/yyyy HH:mm:ss');
+  var isNovo = !p.id;
+  var id = p.id || Utilities.getUuid().slice(0, 8);
+
+  let criadoEm = agora;
+  if (!isNovo) {
+    var antigo = sepGetPedidos_().find(x => x.id === id);
+    if (antigo && antigo.criadoEm) criadoEm = antigo.criadoEm;
+    sepRemoveRows_(sh, id);
+  }
+
+  var itens = (p.itens || []).filter(i => String(i.sku || '').trim());
+  if (!itens.length) itens.push({ sku: '', descricao: '', qtd: '' });
+  var data = sepToBr_(p.dataEntrada);
+  var rows = itens.map(i => [
+    id, String(p.pedido).trim(), String(p.cliente || '').trim(), String(p.vendedor || '').trim(),
+    data, String(i.sku || '').trim(), String(i.descricao || '').trim(), String(i.qtd || ''),
+    criadoEm, agora
+  ]);
+  var start = sh.getLastRow() + 1;
+  sh.getRange(start, 1, rows.length, SEP_LOG_HEADERS.length).setNumberFormat('@').setValues(rows);
+
+  sepHistorico_(isNovo ? 'INCLUÍDO' : 'EDITADO', id, p, data, itens);
+  return id;
+}
+
+function sepDeletePedido_(id) {
+  if (!id) throw new Error('ID não informado');
+  var sh = sepSheet_(SEP_ABA_LOG, SEP_LOG_HEADERS);
+  var antigo = sepGetPedidos_().find(x => x.id === id);
+  sepRemoveRows_(sh, id);
+  if (antigo) sepHistorico_('EXCLUÍDO', id, antigo, sepToBr_(antigo.dataEntrada), antigo.itens);
+}
+
+function sepRemoveRows_(sh, id) {
+  var last = sh.getLastRow();
+  if (last < 2) return;
+  var ids = sh.getRange(2, 1, last - 1, 1).getDisplayValues();
+  for (let i = ids.length - 1; i >= 0; i--) {
+    if (String(ids[i][0]).trim() === id) sh.deleteRow(i + 2);
+  }
+}
+
+function sepHistorico_(acao, id, p, data, itens) {
+  var sh = sepSheet_(SEP_ABA_HIST, SEP_HIST_HEADERS);
+  var skus = (itens || []).filter(i => i.sku).map(i => i.sku + (i.qtd ? ' (x' + i.qtd + ')' : '')).join(', ');
+  sh.appendRow([
+    Utilities.formatDate(new Date(), SEP_TZ, 'dd/MM/yyyy HH:mm:ss'), acao, id,
+    p.pedido || '', p.cliente || '', p.vendedor || '', data, skus
+  ]);
+}
+
+/* ---------------- Datas ---------------- */
+
+// "2026-10-23" -> "23/10/2026"
+function sepToBr_(iso) {
+  var s = String(iso || '').trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[3] + '/' + m[2] + '/' + m[1];
+  return s || Utilities.formatDate(new Date(), SEP_TZ, 'dd/MM/yyyy');
+}
+
+// "23/10/2026" -> "2026-10-23"
+function sepToIso_(br) {
+  var s = String(br || '').trim();
+  var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return s;
+}
+
+/* Rode uma vez pelo editor para autorizar e criar os cabeçalhos */
+function sepSetup() {
+  sepSheet_(SEP_ABA_LOG, SEP_LOG_HEADERS);
+  sepSheet_(SEP_ABA_HIST, SEP_HIST_HEADERS);
+  Logger.log('Catálogo: ' + sepGetCatalogo_().length + ' SKUs');
 }
 
 // ===== SENHAS =====
