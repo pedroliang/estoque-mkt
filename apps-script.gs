@@ -1,6 +1,7 @@
 // =====================================================================
-//  ESTOQUE MKT — Apps Script v2
+//  ESTOQUE MKT — Apps Script v3
 //  Ajuste em massa seguro (lote único, nunca grava 2x) + backups/restauração
+//  + login simples e presença (quem está usando o site agora)
 //  Substitui SOMENTE o bloco antigo do site (doGet, doPost, setPctSite,
 //  getPctSite, pctJson_, baixaEstoqueSite). Funções de outras abas: não mexa.
 //  Depois: Implantar → Gerenciar implantações → lápis → Nova versão → Implantar
@@ -9,7 +10,7 @@
 // ===== CONFIG =====
 var GID_SITE_BAIXA = 961434769; // aba do estoque (mesmo gid usado no site)
 var PCT_KEY = "upsellerPct";    // chave da % Upseller global
-var MKT_VERSION = 2;
+var MKT_VERSION = 3;
 var MKT_COL_COD = 1;            // A
 var MKT_COL_TOTAL = 3;          // C = TOTAL UN
 var MKT_COL_ATUAL = 8;          // H = ATUALIZACAO
@@ -17,6 +18,16 @@ var MKT_BK_SHEET = "_BACKUPS_MKT";      // aba oculta com os backups
 var MKT_LOG_SHEET = "_LOG_AJUSTES_MKT"; // histórico de cada SKU alterado
 var MKT_MAX_BACKUPS = 200;
 var MKT_CHUNK = 40000;          // caracteres por célula (limite Google = 50.000)
+
+// Logins do site: guardam só o HASH da senha, porque este arquivo fica no GitHub.
+// Para criar ou trocar uma senha: edite usuário/senha em mktGerarHash (fim do
+// arquivo), execute essa função, copie o hash do log e cole aqui.
+var MKT_USERS = {
+  user64: "6a20f69d631cbf241ca94c66c15c31886a4e41575630d42d03148dee094a5ac5",
+  adm: "b3993d5984f5f4b9745543e36ddef81d8b02d9e0c5266f51e3d250d5d7b83cea"
+};
+var MKT_PRES_KEY = "mktPresence"; // chave do cache com as sessões abertas
+var MKT_PRES_TTL = 90000;         // ms sem sinal até a sessão sair da lista
 
 // ===== ENTRADAS DO WEB APP =====
 
@@ -41,7 +52,6 @@ function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) throw new Error("POST sem conteudo");
     var data = JSON.parse(e.postData.contents);
-    if (data.action === "setPct") return setPctSite(data);
     return pctJson_(mktHandle_(data));
   } catch (err) {
     return pctJson_({ ok: false, error: mktErr_(err) });
@@ -50,6 +60,12 @@ function doPost(e) {
 
 function mktHandle_(data) {
   var a = data.action || (data.changes ? "legacy" : "");
+  if (a === "login") return mktLogin_(data);
+  if (a === "presence") return mktPresence_(data);
+  if (a === "listBackups") return { ok: true, backups: mktListBackups_() };
+  if (a === "status") return mktBatchStatus_(data.batch);
+  // daqui para baixo tudo grava na planilha: exige login
+  if (!mktUserOf_(data.token)) throw new Error("sessao expirada: entre de novo");
   if (a === "setPct") return JSON.parse(setPctSite(data).getContent());
   if (a === "apply") return mktWithLock_(function () { return mktApplyBatch_(data); });
   if (a === "legacy") return mktWithLock_(function () { return mktApplyLegacy_(data); });
@@ -57,9 +73,72 @@ function mktHandle_(data) {
     return { ok: true, backup: mktCreateBackup_("manual", data.note || "Backup manual", "", null) };
   });
   if (a === "restore") return mktWithLock_(function () { return mktRestore_(data.id, data.scope === "lote"); });
-  if (a === "listBackups") return { ok: true, backups: mktListBackups_() };
-  if (a === "status") return mktBatchStatus_(data.batch);
   throw new Error("acao desconhecida: " + a);
+}
+
+// ===== LOGIN =====
+
+function mktSha_(txt) {
+  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, txt, Utilities.Charset.UTF_8), hex = "";
+  for (var i = 0; i < b.length; i++) hex += ("0" + (b[i] & 255).toString(16)).slice(-2);
+  return hex;
+}
+function mktPassHash_(user, pass) { return mktSha_("estoque-mkt|" + user + "|" + pass); }
+
+// Segredo gerado na primeira execução; fica só nas propriedades do script.
+function mktSecret_() {
+  var pr = PropertiesService.getScriptProperties(), s = pr.getProperty("mktSecret");
+  if (!s) { s = Utilities.getUuid() + Utilities.getUuid(); pr.setProperty("mktSecret", s); }
+  return s;
+}
+// Trocar a senha invalida o token de quem já estava conectado com ela.
+function mktToken_(user) { return user + "." + mktSha_(mktSecret_() + "|" + user + "|" + MKT_USERS[user]); }
+
+function mktUserOf_(token) {
+  var user = String(token || "").split(".")[0];
+  if (!user || !MKT_USERS.hasOwnProperty(user)) return null;
+  return mktToken_(user) === token ? user : null;
+}
+
+function mktLogin_(data) {
+  var user = mktKey_(data.user).toLowerCase();
+  if (!MKT_USERS.hasOwnProperty(user) || mktPassHash_(user, String(data.pass == null ? "" : data.pass)) !== MKT_USERS[user]) {
+    return { ok: false, error: "Login ou senha incorretos" };
+  }
+  return { ok: true, user: user, token: mktToken_(user) };
+}
+
+// ===== PRESENÇA =====
+// data = { action:"presence", token, dev, tab, active, leave }
+// dev = navegador/dispositivo, tab = aba, active = aba visível na tela.
+// Usa o bloqueio do documento, separado do bloqueio dos ajustes de estoque:
+// um ajuste demorado não trava a presença.
+function mktPresence_(data) {
+  var user = mktUserOf_(data.token);
+  if (!user) throw new Error("sessao expirada: entre de novo");
+  var dev = String(data.dev || "").slice(0, 40), tab = String(data.tab || "").slice(0, 40);
+  if (!dev || !tab) throw new Error("presenca sem identificador");
+  var cache = CacheService.getScriptCache(), lock = LockService.getDocumentLock();
+  var locked = !!lock && lock.tryLock(4000);
+  try {
+    var now = new Date().getTime(), map = {}, txt = cache.get(MKT_PRES_KEY);
+    if (txt) { try { map = JSON.parse(txt); } catch (e) { map = {}; } }
+    for (var k in map) if (now - map[k].t > MKT_PRES_TTL) delete map[k];
+    var key = dev + "|" + tab;
+    if (data.leave) delete map[key];
+    else map[key] = { u: user, d: dev, a: !!data.active, t: now };
+    if (locked) cache.put(MKT_PRES_KEY, JSON.stringify(map), 600);
+  } finally {
+    if (locked) lock.releaseLock();
+  }
+  // um navegador com várias abas conta uma vez; ativo se qualquer aba está visível
+  var byDev = {}, sessions = [];
+  for (var m in map) {
+    var s = map[m], cur = byDev[s.d];
+    if (cur) cur.active = cur.active || s.a;
+    else { byDev[s.d] = { dev: s.d, user: s.u, active: s.a }; sessions.push(byDev[s.d]); }
+  }
+  return { ok: true, sessions: sessions };
 }
 
 // ===== % UPSELLER GLOBAL (igual à sua versão) =====
@@ -343,4 +422,11 @@ function mktRestore_(id, soLote) {
 // Baseado no tempo → Contador de dias → escolha o horário.
 function backupDiarioMkt() {
   mktWithLock_(function () { return mktCreateBackup_("diario", "Backup automatico diario", "", null); });
+}
+
+// ===== SENHAS =====
+// Execute no editor do Apps Script e veja o hash em "Registro de execução".
+function mktGerarHash() {
+  var usuario = "novo_usuario", senha = "nova_senha";
+  Logger.log(usuario + ": " + mktPassHash_(usuario, senha));
 }

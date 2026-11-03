@@ -33,8 +33,37 @@
 </helmet>
 <div style="min-height:100vh;background:#0a0d12;background-image:linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);background-size:34px 34px;">
 
+  <sc-if value="{{ notAuthed }}" hint-placeholder-val="{{ false }}">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;">
+      <form onSubmit="{{ submitLogin }}" style="width:100%;max-width:360px;background:#0d1118;border:1px solid #2c3744;border-top:3px solid #2f6df0;padding:26px 24px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:13px;margin-bottom:4px;">
+          <div style="width:38px;height:38px;flex:none;background:linear-gradient(145deg,#2f6df0,#1d4fbf);border:1px solid #4d82ff;display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:#fff;letter-spacing:-.5px;">MK</span>
+          </div>
+          <div>
+            <h1 style="margin:0;font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;letter-spacing:1.5px;color:#f2f6fb;">ESTOQUE MKT</h1>
+            <div style="font-size:11px;color:#6b7889;letter-spacing:.3px;margin-top:1px;">Entre para acessar</div>
+          </div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:1px;color:#8b97a6;">
+          LOGIN
+          <input value="{{ loginUser }}" onChange="{{ onLoginUser }}" autoComplete="username" autoCapitalize="none" spellcheck="false" autoFocus="autofocus" style="width:100%;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:11px 12px;font-size:14px;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
+        </label>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:10.5px;font-weight:600;letter-spacing:1px;color:#8b97a6;">
+          SENHA
+          <input type="password" value="{{ loginPass }}" onChange="{{ onLoginPass }}" autoComplete="current-password" style="width:100%;background:#11151c;border:1px solid #2c3744;color:#e7edf4;padding:11px 12px;font-size:14px;outline:none;" style-focus="border-color:#2f6df0;box-shadow:0 0 0 3px rgba(47,109,240,.15)" />
+        </label>
+        <sc-if value="{{ loginErrShow }}" hint-placeholder-val="{{ false }}">
+          <div style="font-size:12px;line-height:1.5;color:#ef9a9a;">{{ loginErr }}</div>
+        </sc-if>
+        <button type="submit" style="{{ loginBtnStyle }}">{{ loginBtnLabel }}</button>
+      </form>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ authed }}" hint-placeholder-val="{{ true }}">
   <header style="position:sticky;top:0;z-index:30;background:rgba(11,15,21,.93);backdrop-filter:blur(8px);border-bottom:1px solid #222b37;">
-    <div style="max-width:1280px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;gap:18px;">
+    <div style="max-width:1280px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px 18px;">
       <div style="display:flex;align-items:center;gap:13px;min-width:0;">
         <div style="width:38px;height:38px;flex:none;background:linear-gradient(145deg,#2f6df0,#1d4fbf);border:1px solid #4d82ff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1px #0a0d12,0 6px 16px rgba(47,109,240,.32);">
           <span style="font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;color:#fff;letter-spacing:-.5px;">MK</span>
@@ -47,7 +76,15 @@
           <div style="font-size:11px;color:#6b7889;letter-spacing:.3px;margin-top:1px;">Almoxarifado · Marketing</div>
         </div>
       </div>
-      <div style="display:flex;align-items:center;gap:16px;">
+      <div style="display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:10px 16px;">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+          <sc-for list="{{ people }}" as="w" hint-placeholder-count="1">
+            <div title="{{ w.title }}" style="{{ w.style }}">
+              <span style="{{ w.avatarStyle }}">{{ w.initial }}</span>
+              <span>{{ w.label }}</span>
+            </div>
+          </sc-for>
+        </div>
         <div style="display:flex;align-items:center;gap:8px;">
           <sc-if value="{{ live }}" hint-placeholder-val="{{ true }}">
             <span style="width:8px;height:8px;border-radius:50%;background:#35d49a;box-shadow:0 0 9px #35d49a;animation:pulseDot 1.6s ease-in-out infinite;"></span>
@@ -64,11 +101,18 @@
         <button onClick="{{ refresh }}" style="display:flex;align-items:center;gap:7px;background:#161b24;color:#cdd6e1;border:1px solid #2c3744;padding:8px 13px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;" style-hover="background:#1c232e;border-color:#3a4757;color:#fff;">
           <span style="{{ spinStyle }}">⟳</span> Atualizar
         </button>
+        <button onClick="{{ logoutBtn }}" title="Sair do site" style="background:transparent;color:#8b97a6;border:1px solid #2c3744;padding:8px 11px;font-size:12px;font-weight:500;cursor:pointer;letter-spacing:.3px;" style-hover="border-color:#3a4757;color:#fff;">Sair</button>
       </div>
     </div>
   </header>
 
   <main style="max-width:1280px;margin:0 auto;padding:24px;">
+
+    <sc-for list="{{ sharedAlerts }}" as="a" hint-placeholder-count="0">
+      <div style="background:rgba(243,167,64,.1);border:1px solid #7a5a23;border-left:3px solid #f3a740;padding:10px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.5;color:#f3c98a;">
+        <strong style="color:#f3a740;">⚠ {{ a.title }}</strong> {{ a.detail }}
+      </div>
+    </sc-for>
 
     <section style="display:flex;gap:12px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px;">
       <div style="flex:1;min-width:280px;position:relative;display:flex;align-items:center;">
@@ -323,6 +367,7 @@
     </footer>
 
   </main>
+  </sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:820}}">
@@ -350,6 +395,13 @@ class Component extends DCLogic {
     bkBusy: false,
     bkMsg: null,
     bkFilter: "",
+    auth: this.readAuth(),
+    loginUser: "",
+    loginPass: "",
+    loginBusy: false,
+    loginErr: null,
+    sessions: [],
+    visible: document.visibilityState !== "hidden",
     // % do estoque destinada ao canal Upseller (TF = 100 − esse valor).
     // Valor global: lido da CÉLULA K1 da própria aba da planilha a cada
     // atualização (vale para todos). O localStorage é só cache do carregamento.
@@ -380,7 +432,7 @@ class Component extends DCLogic {
       await fetch(this.SCRIPT_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "setPct", pct: n }),
+        body: JSON.stringify({ action: "setPct", pct: n, token: this.token() }),
       });
     } catch (e) { /* silencioso: o valor local continua valendo */ }
   }
@@ -399,15 +451,139 @@ class Component extends DCLogic {
   // gravar na planilha. Veja o passo a passo em apps-script-instrucoes.md.
   SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLSr-9UDOvsJlo-zVji2WPxOB4P03zAGBiWYuisRA71O8Thl-I_76hdRDvCzl1hbnwBw/exec";
 
+  // Sinal de presença a cada 25s; o Apps Script tira da lista quem some por 90s.
+  PRESENCE_MS = 25000;
+  // Cada aba tem seu id; o id do navegador faz várias abas contarem como uma pessoa.
+  tabId = Math.random().toString(36).slice(2, 12);
+
   componentDidMount() {
-    this.load();
-    this._poll = setInterval(() => this.load(true), 60000);
-    this._tick = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
+    this._onVisibility = () => {
+      this.setState({ visible: document.visibilityState !== "hidden" });
+      this.heartbeat();
+    };
+    this._onPageHide = () => this.sendLeave();
+    document.addEventListener("visibilitychange", this._onVisibility);
+    window.addEventListener("pagehide", this._onPageHide);
+    if (this.state.auth) this.startApp();
   }
   componentWillUnmount() {
+    this.stopApp();
+    document.removeEventListener("visibilitychange", this._onVisibility);
+    window.removeEventListener("pagehide", this._onPageHide);
+    clearTimeout(this._pctTimer);
+  }
+  startApp() {
+    this.stopApp();
+    this.load();
+    this.heartbeat();
+    this._poll = setInterval(() => this.load(true), 60000);
+    this._tick = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
+    this._beat = setInterval(() => this.heartbeat(), this.PRESENCE_MS);
+  }
+  stopApp() {
     clearInterval(this._poll);
     clearInterval(this._tick);
-    clearTimeout(this._pctTimer);
+    clearInterval(this._beat);
+  }
+
+  // ---- login e presença ----
+  readAuth() {
+    try {
+      const a = JSON.parse(localStorage.getItem("estoqueMkt.auth"));
+      if (a && a.user && a.token) return a;
+    } catch (e) {}
+    return null;
+  }
+  token() { return this.state.auth ? this.state.auth.token : ""; }
+  deviceId() {
+    if (this._dev) return this._dev;
+    try { this._dev = localStorage.getItem("estoqueMkt.device"); } catch (e) {}
+    if (!this._dev) {
+      this._dev = "D" + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      try { localStorage.setItem("estoqueMkt.device", this._dev); } catch (e) {}
+    }
+    return this._dev;
+  }
+  presenceBody(extra) {
+    return JSON.stringify({ action: "presence", token: this.token(), dev: this.deviceId(), tab: this.tabId, ...extra });
+  }
+
+  async submitLogin(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (this.state.loginBusy) return;
+    const user = this.state.loginUser.trim(), pass = this.state.loginPass;
+    if (!user || !pass) { this.setState({ loginErr: "Preencha login e senha." }); return; }
+    this.setState({ loginBusy: true, loginErr: null });
+    try {
+      const out = await this.postScript(JSON.stringify({ action: "login", user, pass }));
+      if (out && out.ok) {
+        const auth = { user: out.user, token: out.token };
+        try { localStorage.setItem("estoqueMkt.auth", JSON.stringify(auth)); } catch (e2) {}
+        this.setState({ auth, loginBusy: false, loginPass: "", loginUser: "", loginErr: null }, () => this.startApp());
+        return;
+      }
+      const err = (out && out.error) || "";
+      this.setState({ loginBusy: false, loginErr: /acao desconhecida/.test(err)
+        ? "O Apps Script ainda não foi atualizado (veja apps-script-instrucoes.md)."
+        : (err || "Resposta inválida do Apps Script.") });
+    } catch (e3) {
+      this.setState({ loginBusy: false, loginErr: "Não foi possível conectar: " + (e3 && e3.message ? e3.message : e3) });
+    }
+  }
+
+  logout(msg) {
+    this.sendLeave();
+    this.stopApp();
+    try { localStorage.removeItem("estoqueMkt.auth"); } catch (e) {}
+    this.setState({ auth: null, raw: [], sessions: [], loading: true, baixaOpen: false, baixaText: "", bkOpen: false, backups: [], loginErr: msg || null });
+  }
+
+  async heartbeat() {
+    if (!this.state.auth || !this.SCRIPT_URL) return;
+    const seq = this._beatSeq = (this._beatSeq || 0) + 1;
+    try {
+      const out = await this.postScript(this.presenceBody({ active: document.visibilityState !== "hidden" }));
+      // ignora resposta atrasada de um sinal mais antigo, ou que chegou depois de sair
+      if (seq !== this._beatSeq || !this.state.auth) return;
+      if (out && out.ok) this.setState({ sessions: out.sessions || [] });
+      else if (out && /sessao expirada/.test(out.error || "")) this.logout("Sua sessão expirou. Entre de novo.");
+    } catch (e) { /* falha de rede: tenta de novo no próximo sinal */ }
+  }
+
+  // Ao fechar a aba: avisa sem esperar resposta. Se falhar, os 90s resolvem.
+  sendLeave() {
+    if (!this.state.auth || !navigator.sendBeacon) return;
+    try {
+      navigator.sendBeacon(this.SCRIPT_URL, new Blob([this.presenceBody({ leave: true })], { type: "text/plain;charset=utf-8" }));
+    } catch (e) {}
+  }
+
+  presenceView(s) {
+    const me = this.deviceId();
+    const others = (s.sessions || []).filter(x => x.dev !== me);
+    const all = s.auth ? [{ dev: me, user: s.auth.user, active: s.visible, me: true }, ...others] : [];
+    const colors = { user64: "#14b88a", adm: "#f0883e" };
+    const people = all.map(p => {
+      const c = colors[p.user] || "#7c8cf0";
+      const label = p.user + (p.me ? " (você)" : "");
+      return {
+        label,
+        initial: p.user.charAt(0).toUpperCase(),
+        title: label + (p.active ? " · vendo o site agora" : " · em outra aba ou janela"),
+        style: "display:flex;align-items:center;gap:6px;padding:2px 9px 2px 2px;border:1px solid " + c + ";border-radius:14px;font-size:11.5px;font-weight:600;white-space:nowrap;color:#e7edf4;transition:opacity .25s;opacity:" + (p.active ? "1" : ".38") + ";",
+        avatarStyle: "width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#0a0d12;background:" + c + ";",
+      };
+    });
+    const byUser = {};
+    all.forEach(p => { (byUser[p.user] = byUser[p.user] || []).push(p); });
+    const sharedAlerts = Object.keys(byUser).filter(u => byUser[u].length > 1).map(u => {
+      const on = byUser[u].filter(p => p.active).length, away = byUser[u].length - on;
+      return {
+        title: "O login " + u + " está em uso em " + byUser[u].length + " dispositivos ao mesmo tempo.",
+        detail: on + " vendo o site · " + away + " em outra aba ou janela",
+      };
+    });
+    return { people, sharedAlerts };
   }
 
   cell(c) {
@@ -530,7 +706,7 @@ class Component extends DCLogic {
   // Envia um lote com segurança: POST → se a resposta falhar, pergunta ao
   // script se o lote já foi gravado → tenta de novo (POST e depois GET).
   async sendBatch(data) {
-    const body = JSON.stringify(data);
+    const body = JSON.stringify({ ...data, token: this.token() });
     let lastErr = null;
     for (let attempt = 1; attempt <= 4; attempt++) {
       try {
@@ -541,9 +717,10 @@ class Component extends DCLogic {
           throw new Error("o Apps Script publicado é a versão antiga. Cole o apps-script.gs e publique uma Nova versão (veja apps-script-instrucoes.md).");
         }
         if (out && out.ok) return out;
+        if (out && /sessao expirada/.test(out.error || "")) throw new Error("Sessão expirada: saia e entre de novo.");
         lastErr = new Error((out && out.error) || "resposta inválida do Apps Script");
       } catch (err) {
-        if (/versão antiga/.test(err.message)) throw err;
+        if (/versão antiga|Sessão expirada/.test(err.message)) throw err;
         lastErr = err;
       }
       if (data.batchId) {
@@ -605,7 +782,7 @@ class Component extends DCLogic {
     if (this.state.bkBusy) return;
     this.setState({ bkBusy: true, bkMsg: "Criando backup…" });
     try {
-      const out = await this.postScript(JSON.stringify({ action: "backup", note: "Backup manual" }));
+      const out = await this.postScript(JSON.stringify({ action: "backup", note: "Backup manual", token: this.token() }));
       if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida");
       this.setState({ bkBusy: false, bkMsg: "✓ Backup criado: " + out.backup.at });
       this.loadBackups();
@@ -622,7 +799,7 @@ class Component extends DCLogic {
     if (!confirm(txt + "\n\nO estado atual será salvo num backup antes, então dá para voltar.")) return;
     this.setState({ bkBusy: true, applying: true, bkMsg: "Restaurando…", applyMsg: null });
     try {
-      const out = await this.postScript(JSON.stringify({ action: "restore", id: bk.id, scope }));
+      const out = await this.postScript(JSON.stringify({ action: "restore", id: bk.id, scope, token: this.token() }));
       if (!out || !out.ok) throw new Error((out && out.error) || "resposta inválida");
       const m = "✓ Restaurado (" + bk.at + "): " + out.totalChanged + " SKU(s) com TOTAL alterado." +
         (out.missing && out.missing.length ? " · não estão mais na aba: " + out.missing.join(", ") : "");
@@ -951,7 +1128,22 @@ class Component extends DCLogic {
       }));
     const bkOk = (s.bkMsg || "").indexOf("✓") === 0;
 
+    const loginBtnBase = "margin-top:4px;padding:11px 16px;font-size:13px;font-weight:600;letter-spacing:.4px;border:1px solid #4d82ff;color:#fff;";
+
     return {
+      ...this.presenceView(s),
+      authed: !!s.auth,
+      notAuthed: !s.auth,
+      loginUser: s.loginUser,
+      loginPass: s.loginPass,
+      onLoginUser: e => this.setState({ loginUser: e.target.value, loginErr: null }),
+      onLoginPass: e => this.setState({ loginPass: e.target.value, loginErr: null }),
+      submitLogin: e => this.submitLogin(e),
+      loginErrShow: !!s.loginErr,
+      loginErr: s.loginErr || "",
+      loginBtnStyle: loginBtnBase + (s.loginBusy ? "background:#1d3f8a;cursor:wait;" : "background:#2f6df0;cursor:pointer;"),
+      loginBtnLabel: s.loginBusy ? "Entrando…" : "Entrar",
+      logoutBtn: () => this.logout(),
       bkOpen: s.bkOpen,
       bkBtnStyle,
       toggleBk: () => { const open = !this.state.bkOpen; this.setState({ bkOpen: open, bkMsg: null }); if (open) this.loadBackups(); },

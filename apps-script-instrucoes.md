@@ -1,4 +1,4 @@
-# Apps Script do Estoque MKT (v2) — ajuste em massa seguro + backups
+# Apps Script do Estoque MKT (v3) — login, presença, ajuste em massa seguro + backups
 
 O site é estático e só **lê** a planilha. Para gravar (Aprovar mudanças, Backups,
 % Upseller) ele chama um Apps Script publicado dentro da própria planilha.
@@ -14,7 +14,19 @@ O código completo está em **`apps-script.gs`** (neste repositório).
 4. Se o Google pedir autorização de novo, aceite
    (*Avançado → Acessar ... (não seguro)* — é o seu próprio script).
 
-Teste: abra `SUA_URL/exec?action=ping` no navegador → deve mostrar `{"ok":true,"version":2}`.
+Teste: abra `SUA_URL/exec?action=ping` no navegador → deve mostrar `{"ok":true,"version":3}`.
+
+## O que mudou na v3
+
+- **Login** obrigatório no site. O Apps Script confere a senha e só aceita gravação
+  (ajuste, backup, restauração, % Upseller) de quem entrou.
+- **Presença**: o cabeçalho mostra quem está conectado. Cor viva = vendo o site;
+  opaco = em outra aba ou janela. Se o mesmo login estiver aberto em mais de um
+  dispositivo, aparece um aviso.
+- Para trocar ou criar senhas: edite usuário e senha em `mktGerarHash`, execute a
+  função, copie o hash do Registro de execução para `MKT_USERS` e publique uma Nova versão.
+- A planilha continua legível por quem tiver o link dela: o login protege o site e
+  as gravações, não o compartilhamento da planilha.
 
 ## O que mudou na v2
 
@@ -57,7 +69,7 @@ Assim existe um ponto de restauração por dia mesmo sem ajustes.
 
 - Colunas usadas: **A** = código (SKU), **C** = TOTAL UN, **H** = ATUALIZAÇÃO,
   **K1** = % Upseller. C. FECHADA / C. ABERTA continuam sendo fórmulas a partir de C.
-- "Quem pode acessar: Qualquer pessoa" significa que quem tiver a URL do script
-  consegue enviar atualizações. Trate a URL como segredo do time.
+- "Quem pode acessar: Qualquer pessoa" é necessário para o site falar com o script.
+  Desde a v3, gravar exige login.
 - O Google Sheets também tem **Arquivo → Histórico de versões**, que serve como
   última linha de defesa.
