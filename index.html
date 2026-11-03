@@ -946,7 +946,8 @@ class Component extends DCLogic {
       for (const r of grid) {
         const cod = (r[0] || "").trim();
         const desc = (r[1] || "").trim();
-        if (!desc) continue;
+        // Linha só é vazia sem código E sem descrição: SKU sem descrição continua valendo.
+        if (!cod && !desc) continue;
         const cu = cod.toUpperCase();
         if (cu === "COD." || cu === "COD" || desc.toUpperCase() === "DESCRICAO" || desc.toUpperCase() === "DESCRIÇÃO") continue;
         if (cu === "ESTOQUE MKT" || desc.toUpperCase() === "ESTOQUE MKT") continue;
@@ -955,7 +956,7 @@ class Component extends DCLogic {
         const isVer = verif === "TRUE" || verif === "1" || verif === "VERDADEIRO" || verif === "SIM" || verif === "X" || verif === "✓" || verif === "YES" || verif === "Y";
         products.push({
           cod: cod || "—",
-          desc,
+          desc: desc || "(sem descrição)",
           totalDisp: (r[2] || "").trim() || "0",
           totalNum: this.toNum(r[2]),
           porCx: (r[3] || "").trim() || "—",
