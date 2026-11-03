@@ -451,15 +451,20 @@ class Component extends DCLogic {
   // gravar na planilha. Veja o passo a passo em apps-script-instrucoes.md.
   SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyLSr-9UDOvsJlo-zVji2WPxOB4P03zAGBiWYuisRA71O8Thl-I_76hdRDvCzl1hbnwBw/exec";
 
-  // Sinal de presença a cada 25s; o Apps Script tira da lista quem some por 90s.
-  PRESENCE_MS = 25000;
+  // Sinal de presença a cada 15s; o Apps Script tira da lista quem some por 90s.
+  PRESENCE_MS = 15000;
   // Cada aba tem seu id; o id do navegador faz várias abas contarem como uma pessoa.
   tabId = Math.random().toString(36).slice(2, 12);
 
   componentDidMount() {
     this._onVisibility = () => {
-      this.setState({ visible: document.visibilityState !== "hidden" });
-      this.heartbeat();
+      const visible = document.visibilityState !== "hidden";
+      this.setState({ visible });
+      // Ao fechar a aba ela também fica oculta. Esperar um pouco evita que este
+      // sinal chegue depois do aviso de saída e recoloque a pessoa na lista.
+      clearTimeout(this._hideTimer);
+      if (visible) this.heartbeat();
+      else this._hideTimer = setTimeout(() => this.heartbeat(), 1500);
     };
     this._onPageHide = () => this.sendLeave();
     document.addEventListener("visibilitychange", this._onVisibility);
@@ -468,6 +473,7 @@ class Component extends DCLogic {
   }
   componentWillUnmount() {
     this.stopApp();
+    clearTimeout(this._hideTimer);
     document.removeEventListener("visibilitychange", this._onVisibility);
     window.removeEventListener("pagehide", this._onPageHide);
     clearTimeout(this._pctTimer);
@@ -552,10 +558,15 @@ class Component extends DCLogic {
 
   // Ao fechar a aba: avisa sem esperar resposta. Se falhar, os 90s resolvem.
   sendLeave() {
-    if (!this.state.auth || !navigator.sendBeacon) return;
-    try {
-      navigator.sendBeacon(this.SCRIPT_URL, new Blob([this.presenceBody({ leave: true })], { type: "text/plain;charset=utf-8" }));
-    } catch (e) {}
+    if (!this.state.auth) return;
+    // keepalive mantém o envio com a aba fechando; sem cookies, como os demais sinais
+    fetch(this.SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: this.presenceBody({ leave: true }),
+      keepalive: true,
+      credentials: "omit",
+    }).catch(() => {});
   }
 
   presenceView(s) {
