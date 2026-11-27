@@ -525,6 +525,12 @@ class Component extends DCLogic {
   // em vermelho. Se o adm mudar de rede, a referência muda junto. Com o adm fora do
   // site, vale o último IP do adm visto neste navegador.
   REF_USER = "adm";
+  // Aba escondida há mais de 3 min (outra aba, celular bloqueado ou em segundo plano)
+  // sai da lista de presença; volta sozinha quando a pessoa abre a aba de novo.
+  AWAY_MS = 180000;
+  // Versão do site. A cada 2 min o site confere se há versão nova no GitHub e
+  // recarrega sozinho (só quando não há ajuste em andamento). Troque a cada publicação.
+  BUILD = "20261127-2";
   // Cada aba tem seu id; o id do navegador faz várias abas contarem como uma pessoa.
   tabId = Math.random().toString(36).slice(2, 12);
 
@@ -532,6 +538,8 @@ class Component extends DCLogic {
     this._onVisibility = () => {
       const visible = document.visibilityState !== "hidden";
       this.setState({ visible });
+      if (visible) { this._hiddenAt = 0; this._gone = false; }
+      else if (!this._hiddenAt) this._hiddenAt = Date.now();
       // Ao fechar a aba ela também fica oculta. Esperar um pouco evita que este
       // sinal chegue depois do aviso de saída e recoloque a pessoa na lista.
       clearTimeout(this._hideTimer);
@@ -541,6 +549,8 @@ class Component extends DCLogic {
     this._onPageHide = () => this.sendLeave();
     document.addEventListener("visibilitychange", this._onVisibility);
     window.addEventListener("pagehide", this._onPageHide);
+    if (document.visibilityState === "hidden") this._hiddenAt = Date.now();
+    this._verTimer = setInterval(() => this.checkVersion(), 120000);
     this._onPopKey = e => { if (e.key === "Escape" && this.state.popCol) this.setState({ popCol: null }); };
     // A janela do filtro fica presa ao cabeçalho: se a tela rolar, ela fecha.
     this._onPopScroll = e => {
@@ -558,6 +568,7 @@ class Component extends DCLogic {
     clearTimeout(this._hideTimer);
     document.removeEventListener("visibilitychange", this._onVisibility);
     window.removeEventListener("pagehide", this._onPageHide);
+    clearInterval(this._verTimer);
     document.removeEventListener("keydown", this._onPopKey);
     window.removeEventListener("scroll", this._onPopScroll, true);
     window.removeEventListener("resize", this._onPopScroll);
@@ -662,8 +673,24 @@ class Component extends DCLogic {
     this.setState({ auth: null, raw: [], sessions: [], loading: true, colFilter: { cod: "", desc: "", min: "", max: "", from: "", to: "" }, colSort: null, popCol: null, baixaOpen: false, baixaText: "", bkOpen: false, backups: [], loginErr: msg || null });
   }
 
+  // Recarrega quando o GitHub tem versão nova, para ninguém ficar com o site antigo.
+  async checkVersion() {
+    try {
+      const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+      const m = (await r.text()).match(/BUILD = "(\d[^"]*)"/);
+      const s = this.state;
+      const busy = s.applying || (s.baixaText || "").trim() || s.popCol;
+      if (m && m[1] !== this.BUILD && !busy) location.reload();
+    } catch (e) { /* sem rede: tenta de novo depois */ }
+  }
+
   async heartbeat() {
     if (!this.state.auth || !this.SCRIPT_URL) return;
+    // escondida há muito tempo: avisa a saída uma vez e para de mandar sinal
+    if (this._hiddenAt && Date.now() - this._hiddenAt > this.AWAY_MS) {
+      if (!this._gone) { this._gone = true; this._beatSeq = (this._beatSeq || 0) + 1; this.sendLeave(); }
+      return;
+    }
     const seq = this._beatSeq = (this._beatSeq || 0) + 1;
     try {
       const out = await this.postScript(this.presenceBody({ active: document.visibilityState !== "hidden" }));
