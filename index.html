@@ -521,10 +521,10 @@ class Component extends DCLogic {
 
   // Sinal de presença a cada 15s; o Apps Script tira da lista quem some por 90s.
   PRESENCE_MS = 15000;
-  // Redes conhecidas (IP público). Acesso de qualquer outro IP pisca em vermelho.
-  // Para liberar uma rede nova, acrescente o IP aqui entre aspas, separado por vírgula.
-  // Um prefixo terminado em ponto (ex.: "200.146.") libera a faixa inteira da operadora.
-  REDES_CONHECIDAS = ["200.146.221.228"];
+  // A rede de referência é a do login adm: quem estiver em IP diferente do adm pisca
+  // em vermelho. Se o adm mudar de rede, a referência muda junto. Com o adm fora do
+  // site, vale o último IP do adm visto neste navegador.
+  REF_USER = "adm";
   // Cada aba tem seu id; o id do navegador faz várias abas contarem como uma pessoa.
   tabId = Math.random().toString(36).slice(2, 12);
 
@@ -692,9 +692,20 @@ class Component extends DCLogic {
     const others = (s.sessions || []).filter(x => x.dev !== me);
     const all = s.auth ? [{ dev: me, user: s.auth.user, active: s.visible, me: true, ip: s.myIp || this._ip || "" }, ...others] : [];
     const colors = { user64: "#14b88a", adm: "#f0883e", Silvia: "#ec6fa8", Givaldo: "#4d9df0", userFL: "#b48cf2", userDF: "#e3c54f" };
-    const known = ip => !ip || this.REDES_CONHECIDAS.some(r => r.slice(-1) === "." ? ip.indexOf(r) === 0 : ip === r);
+    let ref = [...new Set(all.filter(p => p.user === this.REF_USER && p.ip).map(p => p.ip))];
+    if (ref.length) {
+      if (ref.join(",") !== this._refIp) {
+        this._refIp = ref.join(",");
+        try { localStorage.setItem("estoqueMkt.admIp", this._refIp); } catch (e) {}
+      }
+    } else {
+      if (this._refIp == null) { try { this._refIp = localStorage.getItem("estoqueMkt.admIp") || ""; } catch (e) { this._refIp = ""; } }
+      ref = this._refIp ? this._refIp.split(",") : [];
+    }
+    // fora da rede: não é o adm, tem IP e o IP não é o do adm
+    const isAlien = p => p.user !== this.REF_USER && !!p.ip && ref.length > 0 && ref.indexOf(p.ip) < 0;
     const people = all.map(p => {
-      const alien = !known(p.ip);
+      const alien = isAlien(p);
       const c = alien ? "#ef5d5d" : p.active ? (colors[p.user] || "#7c8cf0") : "#566170"; // cinza: fora da tela; vermelho: rede desconhecida
       const label = p.user + (p.me ? " (você)" : "");
       return {
@@ -703,7 +714,7 @@ class Component extends DCLogic {
         ip: p.ip || "",
         hasIp: !!p.ip,
         ipStyle: "font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:" + (alien ? "700" : "500") + ";color:" + (alien ? "#ff8a8a" : p.active ? "#9aa7b6" : "#5f6b7a") + ";",
-        title: label + (p.active ? " · vendo o site agora" : " · em outra aba ou janela") + (p.ip ? " · IP " + p.ip : " · IP desconhecido") + (alien ? " · ⚠ REDE DESCONHECIDA" : ""),
+        title: label + (p.active ? " · vendo o site agora" : " · em outra aba ou janela") + (p.ip ? " · IP " + p.ip : " · IP desconhecido") + (alien ? " · ⚠ FORA DA REDE DO ADM" : ""),
         style: "display:flex;align-items:center;gap:6px;padding:2px 9px 2px 2px;border:1px solid " + c + ";border-radius:14px;font-size:11.5px;font-weight:600;white-space:nowrap;transition:color .25s,border-color .25s;color:" + (alien || p.active ? "#e7edf4" : "#7d8a99") + ";" + (alien ? "animation:blinkRed 1s ease-in-out infinite;" : ""),
         avatarStyle: "width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:" + (p.active ? "#0a0d12" : "#c3ccd6") + ";transition:background .25s;background:" + c + ";",
       };
@@ -718,9 +729,9 @@ class Component extends DCLogic {
           " · IPs: " + byUser[u].map(p => p.ip || "?").join(", "),
       };
     });
-    const alienAlerts = all.filter(p => !known(p.ip)).map(p => ({
-      title: "Acesso de rede desconhecida: " + p.user + (p.me ? " (você)" : "") + " · IP " + p.ip,
-      detail: "Se for uma rede de confiança, acrescente o IP em REDES_CONHECIDAS no index.html.",
+    const alienAlerts = all.filter(isAlien).map(p => ({
+      title: "Acesso fora da rede do adm: " + p.user + (p.me ? " (você)" : "") + " · IP " + p.ip,
+      detail: "Rede do adm: " + ref.join(", ") + ".",
     }));
     return { people, sharedAlerts, alienAlerts };
   }
