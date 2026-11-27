@@ -82,6 +82,9 @@
             <div title="{{ w.title }}" style="{{ w.style }}">
               <span style="{{ w.avatarStyle }}">{{ w.initial }}</span>
               <span>{{ w.label }}</span>
+              <sc-if value="{{ w.hasIp }}" hint-placeholder-val="{{ false }}">
+                <span style="{{ w.ipStyle }}">{{ w.ip }}</span>
+              </sc-if>
             </div>
           </sc-for>
         </div>
@@ -458,6 +461,7 @@ class Component extends DCLogic {
     loginBusy: false,
     loginErr: null,
     sessions: [],
+    myIp: "",
     visible: document.visibilityState !== "hidden",
     // % do estoque destinada ao canal Upseller (TF = 100 − esse valor).
     // Valor global: lido da CÉLULA K1 da própria aba da planilha a cada
@@ -551,7 +555,7 @@ class Component extends DCLogic {
   startApp() {
     this.stopApp();
     this.load();
-    this.heartbeat();
+    this.loadIp().then(() => this.heartbeat());
     this._poll = setInterval(() => this.load(true), 60000);
     this._tick = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 1000);
     this._beat = setInterval(() => this.heartbeat(), this.PRESENCE_MS);
@@ -581,7 +585,29 @@ class Component extends DCLogic {
     return this._dev;
   }
   presenceBody(extra) {
-    return JSON.stringify({ action: "presence", token: this.token(), dev: this.deviceId(), tab: this.tabId, ...extra });
+    return JSON.stringify({ action: "presence", token: this.token(), dev: this.deviceId(), tab: this.tabId, ip: this._ip || "", ...extra });
+  }
+
+  // IP público deste navegador. O Apps Script não vê o IP de quem acessa,
+  // então o site pergunta a um serviço público e manda junto no sinal de presença.
+  // Se falhar, a presença segue normal e o selo fica sem IP.
+  async loadIp() {
+    if (this._ip) return this._ip;
+    const srcs = [
+      ["https://api.ipify.org?format=json", r => r.json().then(j => j.ip)],
+      ["https://api64.ipify.org?format=json", r => r.json().then(j => j.ip)],
+      ["https://icanhazip.com", r => r.text()],
+    ];
+    for (const [url, read] of srcs) {
+      try {
+        const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 4000);
+        const r = await fetch(url, { cache: "no-store", signal: ctl.signal });
+        clearTimeout(t);
+        const ip = String(await read(r) || "").trim();
+        if (/^[0-9a-fA-F.:]{3,45}$/.test(ip)) { this._ip = ip; this.setState({ myIp: ip }); return ip; }
+      } catch (e) { /* tenta o próximo */ }
+    }
+    return "";
   }
 
   // O Apps Script compara a senha exata. Para aceitar maiúsculas ou minúsculas,
@@ -653,7 +679,7 @@ class Component extends DCLogic {
   presenceView(s) {
     const me = this.deviceId();
     const others = (s.sessions || []).filter(x => x.dev !== me);
-    const all = s.auth ? [{ dev: me, user: s.auth.user, active: s.visible, me: true }, ...others] : [];
+    const all = s.auth ? [{ dev: me, user: s.auth.user, active: s.visible, me: true, ip: s.myIp || this._ip || "" }, ...others] : [];
     const colors = { user64: "#14b88a", adm: "#f0883e", Silvia: "#ec6fa8", Givaldo: "#4d9df0", userFL: "#b48cf2", userDF: "#e3c54f" };
     const people = all.map(p => {
       const c = p.active ? (colors[p.user] || "#7c8cf0") : "#566170"; // cinza: fora da tela
@@ -661,7 +687,10 @@ class Component extends DCLogic {
       return {
         label,
         initial: p.user.charAt(0).toUpperCase(),
-        title: label + (p.active ? " · vendo o site agora" : " · em outra aba ou janela"),
+        ip: p.ip || "",
+        hasIp: !!p.ip,
+        ipStyle: "font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;color:" + (p.active ? "#9aa7b6" : "#5f6b7a") + ";",
+        title: label + (p.active ? " · vendo o site agora" : " · em outra aba ou janela") + (p.ip ? " · IP " + p.ip : " · IP desconhecido"),
         style: "display:flex;align-items:center;gap:6px;padding:2px 9px 2px 2px;border:1px solid " + c + ";border-radius:14px;font-size:11.5px;font-weight:600;white-space:nowrap;transition:color .25s,border-color .25s;color:" + (p.active ? "#e7edf4" : "#7d8a99") + ";",
         avatarStyle: "width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:" + (p.active ? "#0a0d12" : "#c3ccd6") + ";transition:background .25s;background:" + c + ";",
       };
@@ -672,7 +701,8 @@ class Component extends DCLogic {
       const on = byUser[u].filter(p => p.active).length, away = byUser[u].length - on;
       return {
         title: "O login " + u + " está em uso em " + byUser[u].length + " dispositivos ao mesmo tempo.",
-        detail: on + " vendo o site · " + away + " em outra aba ou janela",
+        detail: on + " vendo o site · " + away + " em outra aba ou janela" +
+          " · IPs: " + byUser[u].map(p => p.ip || "?").join(", "),
       };
     });
     return { people, sharedAlerts };

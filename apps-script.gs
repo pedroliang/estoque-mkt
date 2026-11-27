@@ -117,7 +117,8 @@ function mktLogin_(data) {
 }
 
 // ===== PRESENÇA =====
-// data = { action:"presence", token, dev, tab, active, leave }
+// data = { action:"presence", token, dev, tab, active, leave, ip }
+// ip = IP público informado pelo próprio navegador (o Apps Script não enxerga o IP).
 // dev = navegador/dispositivo, tab = aba, active = aba visível na tela.
 // Usa o bloqueio do documento, separado do bloqueio dos ajustes de estoque:
 // um ajuste demorado não trava a presença.
@@ -125,6 +126,7 @@ function mktPresence_(data) {
   var user = mktUserOf_(data.token);
   if (!user) throw new Error("sessao expirada: entre de novo");
   var dev = String(data.dev || "").slice(0, 40), tab = String(data.tab || "").slice(0, 40);
+  var ip = String(data.ip || "").replace(/[^0-9a-fA-F.:]/g, "").slice(0, 45);
   if (!dev || !tab) throw new Error("presenca sem identificador");
   var cache = CacheService.getScriptCache(), lock = LockService.getDocumentLock();
   var locked = !!lock && lock.tryLock(4000);
@@ -134,7 +136,7 @@ function mktPresence_(data) {
     for (var k in map) if (now - map[k].t > MKT_PRES_TTL) delete map[k];
     var key = dev + "|" + tab;
     if (data.leave) delete map[key];
-    else map[key] = { u: user, d: dev, a: !!data.active, t: now };
+    else map[key] = { u: user, d: dev, a: !!data.active, t: now, ip: ip || (map[key] && map[key].ip) || "" };
     if (locked) cache.put(MKT_PRES_KEY, JSON.stringify(map), 600);
   } finally {
     if (locked) lock.releaseLock();
@@ -143,8 +145,8 @@ function mktPresence_(data) {
   var byDev = {}, sessions = [];
   for (var m in map) {
     var s = map[m], cur = byDev[s.d];
-    if (cur) cur.active = cur.active || s.a;
-    else { byDev[s.d] = { dev: s.d, user: s.u, active: s.a }; sessions.push(byDev[s.d]); }
+    if (cur) { cur.active = cur.active || s.a; if (!cur.ip) cur.ip = s.ip || ""; }
+    else { byDev[s.d] = { dev: s.d, user: s.u, active: s.a, ip: s.ip || "" }; sessions.push(byDev[s.d]); }
   }
   return { ok: true, sessions: sessions };
 }
